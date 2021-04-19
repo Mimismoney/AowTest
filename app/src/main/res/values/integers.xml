@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="wait_ad_seconds">30</dimen>
+    <dimen name="stuck_ad_seconds">10</dimen>
+    <integer name="no_ad_times">5</integer>
+    <dimen name="game_stuck_seconds">60</dimen>
+    <dimen name="treasure_period_seconds">3605</dimen>
+    <integer name="min_self_soldiers">200</integer>
+    <dimen name="detect_period_seconds">1</dimen>
+    <bool name="hero_dead_quit">true</bool>
+</resources>

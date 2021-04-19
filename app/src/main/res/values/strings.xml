@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">Aow腳本測試</string>
+    <string name="title_activity_main">Aow腳本測試</string>
+    <string name="wait_ad_seconds">WaitAdSeconds</string>
+    <string name="stuck_ad_seconds">StuckAdSeconds</string>
+    <string name="no_ad_times">NoAdTimes</string>
+    <string name="game_stuck_seconds">GameStuckSeconds</string>
+    <string name="treasure_period_seconds">TreasurePeriodSeconds</string>
+    <string name="min_self_soldiers">MinSelfSoldiers</string>
+    <string name="detect_period_seconds">DetectPeriodSeconds</string>
+    <string name="hero_dead_quit">HeroDeadQuit</string>
+    <string name="accessibility_service_description">使用自動點擊</string>
+</resources>
