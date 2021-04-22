@@ -39,7 +39,6 @@ class MainActivity : Activity() {
     private lateinit var finishQuitGameCheck: CheckBox
     private lateinit var crashTestButton: Button
     private val REQUEST_SCREEN_CAP = 1
-    private val REQUEST_CHOOSE_JSON = 2
 
     override fun onCreate(savedInstanceState: Bundle?) {
         onIntent(intent)
@@ -158,11 +157,6 @@ class MainActivity : Activity() {
         InputStreamReader(assets.open("config.json")).use {
             pointDataJson = getSharedPreferences("pointData", Context.MODE_PRIVATE).getString("pointData", it.readText())!!
         }
-        val pointData = PointDataParser.deserializeJson(pointDataJson, matrics.heightPixels)
-        if (pointData.width != matrics.widthPixels) {
-            Toast.makeText(this, "不支援的螢幕解析度 ${matrics.widthPixels}x${matrics.heightPixels}", Toast.LENGTH_SHORT).show()
-            return
-        }
         val accessibilityManager = getSystemService(Context.ACCESSIBILITY_SERVICE) as AccessibilityManager
         val serviceInfo = accessibilityManager.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_GENERIC).find {
             val enabledServiceInfo = it.resolveInfo.serviceInfo
@@ -194,34 +188,7 @@ class MainActivity : Activity() {
                     Toast.makeText(this, "無法取得螢幕權限", Toast.LENGTH_SHORT).show()
                 }
             }
-            REQUEST_CHOOSE_JSON -> {
-                if (resultCode != RESULT_OK || data == null) return
-                val uri = data.data ?: return
-                try {
-                    var input = ""
-                    InputStreamReader(contentResolver.openInputStream(uri)).use {
-                        input = it.readText()
-                    }
-                    val metrics = DisplayMetrics()
-                    val display = (getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay
-                    display.getRealMetrics(metrics)
-                    PointDataParser.deserializeJson(input, metrics.heightPixels)
-                    getSharedPreferences("pointData", Context.MODE_PRIVATE).edit().putString("pointData", input).apply()
-                    Toast.makeText(this, "成功載入資料", Toast.LENGTH_SHORT).show()
-                } catch (ex: Exception) {
-                    Toast.makeText(this, "解析檔案出錯 ${ex.localizedMessage}", Toast.LENGTH_SHORT).show()
-                    Log.d("ERROR", if (ex.message != null) ex.message!! else "")
-                }
-            }
         }
-    }
-
-    fun onPointDataClick(view: View) {
-        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
-            type = "*/*"
-        }
-        val chooser = Intent.createChooser(intent, "選擇點位資料Json檔")
-        startActivityForResult(chooser, REQUEST_CHOOSE_JSON)
     }
 
     fun onCrashClick(view: View) {

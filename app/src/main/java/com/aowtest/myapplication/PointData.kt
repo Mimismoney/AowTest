@@ -16,7 +16,7 @@ class DetectionLogic(var point: Point, var color: Color, var rect: Rect)
 class PointData(var width: Int, var height: Int, var logic: Array<DetectionLogic>)
 class PointDataParser {
     companion object {
-        fun deserializeJson(input: String, height: Int) : PointData {
+        fun deserializeJson(input: String, width: Int, height: Int) : PointData {
             val pattern = Pattern.compile("//.*$", Pattern.MULTILINE)
             val mather = pattern.matcher(input)
             val inputNoComment = mather.replaceAll("")
@@ -32,7 +32,9 @@ class PointDataParser {
                         pointData.height = reader.nextInt()
                     }
                     "logic" -> {
-                        pointData.logic = readDetectionLogic(reader, height - pointData.height)
+                        val ratio = width.toDouble() / pointData.width
+                        val heightDiff = height - (pointData.height * ratio)
+                        pointData.logic = readDetectionLogic(reader, ratio, heightDiff)
                     }
                 }
             }
@@ -40,15 +42,15 @@ class PointDataParser {
             return pointData
         }
 
-        private fun readDetectionLogic(reader: JsonReader, heightDiff: Int): Array<DetectionLogic> {
+        private fun readDetectionLogic(reader: JsonReader, ratio: Double, heightDiff: Double): Array<DetectionLogic> {
             val arr = arrayListOf<DetectionLogic>()
             reader.beginArray()
             while (reader.hasNext()) {
                 val logic = DetectionLogic(Point(0, 0), Color(0, 0, 0), Rect(0, 0, 0, 0))
                 reader.beginArray()
                 reader.beginArray()
-                logic.point.x = reader.nextInt()
-                logic.point.y = reader.nextInt()
+                logic.point.x = (reader.nextInt() * ratio).toInt()
+                logic.point.y = (reader.nextInt() * ratio).toInt()
                 reader.endArray()
                 reader.beginArray()
                 logic.color.r = reader.nextInt()
@@ -56,10 +58,10 @@ class PointDataParser {
                 logic.color.b = reader.nextInt()
                 reader.endArray()
                 reader.beginArray()
-                logic.rect.left = reader.nextInt()
-                logic.rect.top = reader.nextInt()
-                logic.rect.width = reader.nextInt()
-                logic.rect.height = reader.nextInt()
+                logic.rect.left = (reader.nextInt() * ratio).toInt()
+                logic.rect.top = (reader.nextInt() * ratio).toInt()
+                logic.rect.width = (reader.nextInt() * ratio).toInt()
+                logic.rect.height = (reader.nextInt() * ratio).toInt()
                 reader.endArray()
                 if (reader.peek() == JsonToken.NUMBER) {
                     logic.point.y = (heightDiff * reader.nextDouble() + logic.point.y).toInt()

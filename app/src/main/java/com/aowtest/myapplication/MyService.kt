@@ -128,11 +128,7 @@ class MyService : AccessibilityService() {
         mediaProjection = mediaProjectionManager.getMediaProjection(Activity.RESULT_OK, intent)
         val width = metrics.widthPixels
         val height = metrics.heightPixels
-        var defaultPointDataJson = ""
-        InputStreamReader(assets.open("config.json")).use {
-            defaultPointDataJson = getSharedPreferences("pointData", Context.MODE_PRIVATE).getString("pointData", it.readText())!!
-        }
-        val data = PointDataParser.deserializeJson(defaultPointDataJson, height)
+        val data = PointDataParser.deserializeJson(InputStreamReader(assets.open("config.json")).use { it.readText() }, width, height)
         val imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 3)
         mediaProjection.createVirtualDisplay("ScreenCapture", width, height, metrics.densityDpi, DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, imageReader.surface, null, null)
         val sp = getSharedPreferences("setting", Context.MODE_PRIVATE)
