@@ -23,7 +23,6 @@ import android.widget.EditText
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
-import com.google.firebase.analytics.FirebaseAnalytics
 import java.io.File
 import java.io.InputStreamReader
 
@@ -37,6 +36,7 @@ class MainActivity : Activity() {
     private lateinit var minSelfSoldiersText: EditText
     private lateinit var detectPeriodSecondsText: EditText
     private lateinit var heroDeadQuitCheck: CheckBox
+    private lateinit var finishQuitGameCheck: CheckBox
     private lateinit var crashTestButton: Button
     private val REQUEST_SCREEN_CAP = 1
     private val REQUEST_CHOOSE_JSON = 2
@@ -52,6 +52,7 @@ class MainActivity : Activity() {
         minSelfSoldiersText = findViewById(R.id.min_self_soldiers)
         detectPeriodSecondsText = findViewById(R.id.detect_period_seconds)
         heroDeadQuitCheck = findViewById(R.id.hero_dead_quit)
+        finishQuitGameCheck = findViewById(R.id.finish_quit_game)
         crashTestButton = findViewById(R.id.crash_test)
         val data = getSharedPreferences("setting", Context.MODE_PRIVATE)
         waitAdSecondsText.text = data.getFloat(getString(R.string.wait_ad_seconds), ResourcesCompat.getFloat(resources, R.dimen.wait_ad_seconds)).toString().toEditable()
@@ -62,6 +63,7 @@ class MainActivity : Activity() {
         minSelfSoldiersText.text = data.getInt(getString(R.string.min_self_soldiers), resources.getInteger(R.integer.min_self_soldiers)).toString().toEditable()
         detectPeriodSecondsText.text = data.getFloat(getString(R.string.detect_period_seconds), ResourcesCompat.getFloat(resources, R.dimen.detect_period_seconds)).toString().toEditable()
         heroDeadQuitCheck.isChecked = data.getBoolean(getString(R.string.hero_dead_quit), resources.getBoolean(R.bool.hero_dead_quit))
+        finishQuitGameCheck.isChecked = data.getBoolean(getString(R.string.finish_quit_game), resources.getBoolean(R.bool.finish_quit_game))
         if (!BuildConfig.DEBUG) {
             crashTestButton.visibility = View.GONE
         }
@@ -85,15 +87,25 @@ class MainActivity : Activity() {
     }
 
     private fun onIntent(intent: Intent?) {
-        if (intent?.action == "RESTART") {
-            Looper.myLooper()?.let {
-                Handler(it).postDelayed({
-                    (getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager).killBackgroundProcesses("com.addictive.strategy.army")
-                    applicationContext.startActivity(Intent().apply {
-                        component = ComponentName("com.addictive.strategy.army", "com.addictive.strategy.army.UnityPlayerActivity")
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                    })
-                }, 3000)
+        when (intent?.action) {
+            "RESTART" -> {
+                Looper.myLooper()?.let {
+                    Handler(it).postDelayed({
+                        (getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager).killBackgroundProcesses("com.addictive.strategy.army")
+                        applicationContext.startActivity(Intent().apply {
+                            component = ComponentName("com.addictive.strategy.army", "com.addictive.strategy.army.UnityPlayerActivity")
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                        })
+                    }, 3000)
+                }
+            }
+            "QUIT" -> {
+                Looper.myLooper()?.let {
+                    Handler(it).postDelayed({
+                        (getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager).killBackgroundProcesses("com.addictive.strategy.army")
+                        finish()
+                    }, 3000)
+                }
             }
         }
     }
@@ -129,6 +141,10 @@ class MainActivity : Activity() {
                 .putBoolean(
                     getString(R.string.hero_dead_quit),
                     heroDeadQuitCheck.isChecked
+                )
+                .putBoolean(
+                    getString(R.string.finish_quit_game),
+                    finishQuitGameCheck.isChecked
                 )
                 .apply()
         } catch (ex: NumberFormatException) {

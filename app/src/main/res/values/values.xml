@@ -8,4 +8,5 @@
     <integer name="min_self_soldiers">200</integer>
     <dimen name="detect_period_seconds">1</dimen>
     <bool name="hero_dead_quit">true</bool>
+    <bool name="finish_quit_game">false</bool>
 </resources>

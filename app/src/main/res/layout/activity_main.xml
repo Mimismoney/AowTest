@@ -49,15 +49,14 @@
             </TableRow>
             <TableRow>
                 <CheckBox android:text="英雄死亡退出" android:id="@+id/hero_dead_quit" android:layout_weight="1" />
-                <Button android:text="導入點位資料" android:layout_weight="1" android:onClick="onPointDataClick"/>
             </TableRow>
             <TableRow>
-                <Button android:text="開啟服務"
-                    android:onClick="onStartServiceClick"
-                    android:layout_weight="1"
-                    android:layout_height="wrap_content"
-                    android:layout_width="match_parent" />
-                <Button android:text="測試Crash" android:onClick="onCrashClick" android:layout_weight="1" android:layout_height="wrap_content" android:layout_width="match_parent" android:id="@+id/crash_test"/>
+                <CheckBox android:text="刷金完成後退出遊戲" android:id="@+id/finish_quit_game" android:layout_weight="1" />
+            </TableRow>
+            <TableRow>
+                <Button android:text="導入點位資料" android:layout_weight="1" android:onClick="onPointDataClick"/>
+                <Button android:text="開啟服務" android:onClick="onStartServiceClick" android:layout_weight="1" />
+                <Button android:text="測試Crash" android:onClick="onCrashClick" android:layout_weight="1" android:id="@+id/crash_test"/>
             </TableRow>
         </TableLayout>
     </ScrollView>

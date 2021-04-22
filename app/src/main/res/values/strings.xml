@@ -9,5 +9,6 @@
     <string name="min_self_soldiers">MinSelfSoldiers</string>
     <string name="detect_period_seconds">DetectPeriodSeconds</string>
     <string name="hero_dead_quit">HeroDeadQuit</string>
+    <string name="finish_quit_game">FinishQuitScript</string>
     <string name="accessibility_service_description">使用自動點擊</string>
 </resources>

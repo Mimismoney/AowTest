@@ -16,7 +16,6 @@ import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
-import android.os.PowerManager
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.KeyEvent
@@ -42,7 +41,6 @@ class MyService : AccessibilityService() {
     private var toast: Toast? = null
     private var handler = Looper.myLooper()?.let { Handler(it) }
     private var task = ScriptRunner()
-    private var wakeLock: PowerManager.WakeLock? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -147,6 +145,7 @@ class MyService : AccessibilityService() {
             minSelfSoldiers = sp.getInt(getString(R.string.min_self_soldiers), resources.getInteger(R.integer.min_self_soldiers))
             detectPeriodSeconds = sp.getFloat(getString(R.string.detect_period_seconds), ResourcesCompat.getFloat(resources, R.dimen.detect_period_seconds))
             heroDeadQuit = sp.getBoolean(getString(R.string.hero_dead_quit), resources.getBoolean(R.bool.hero_dead_quit))
+            finishQuitGame = sp.getBoolean(getString(R.string.finish_quit_game), resources.getBoolean(R.bool.finish_quit_game))
         }
     }
 
@@ -164,24 +163,17 @@ class MyService : AccessibilityService() {
         return false
     }
 
-    private fun stop() {
+    fun stop() {
         running = false
         handler?.removeCallbacks(task)
         showToast("腳本已停止")
         updateService()
-        wakeLock?.release()
-        wakeLock = null
     }
 
     private fun afk() {
         running = true
         script?.init()
         task.run()
-        wakeLock = (getSystemService(Context.POWER_SERVICE) as PowerManager).run {
-            newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MyService::Lock").apply {
-                acquire(365L * 24 * 60 * 60 * 1000)
-            }
-        }
         showToast("腳本開始執行")
         updateService()
     }

@@ -7,6 +7,8 @@ import android.graphics.Bitmap
 import android.graphics.Path
 import android.media.Image
 import android.media.ImageReader
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityWindowInfo
@@ -34,6 +36,7 @@ class AowScript(private val service: MyService, private val data: PointData, pri
                 10f
             } else field
     var heroDeadQuit: Boolean = true
+    var finishQuitGame: Boolean = false
 
     // 腳本變數
     private var date = 0
@@ -196,7 +199,18 @@ class AowScript(private val service: MyService, private val data: PointData, pri
             else if (detect(data.logic[7], ClickWay.NONE))
                 noAd(data.logic[7].rect)
             else if (detect(data.logic[8], ClickWay.NONE)) {
-                hasCoin = !detect(data.logic[9], ClickWay.DETECT_RECT)
+                if (detect(data.logic[9], ClickWay.DETECT_RECT)) {
+                    hasCoin = false
+                    if (finishQuitGame) {
+                        Looper.myLooper()?.run { Handler(this) }?.post {
+                            service.stop()
+                            service.startActivity(Intent(Intent.ACTION_MAIN).apply {
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                addCategory(Intent.CATEGORY_HOME)
+                            })
+                        }
+                    }
+                }
                 click(if (hasCoin) data.logic[8].rect else data.logic[6].rect)
             } else if (detect(data.logic[10])) ;
             else if (detect(data.logic[11])) ;
@@ -259,7 +273,7 @@ class AowScript(private val service: MyService, private val data: PointData, pri
 
     private fun restart() {
         service.startActivity(Intent(service, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
             action = "RESTART"
         })
         noActionCount = 0
@@ -319,7 +333,7 @@ class AowScript(private val service: MyService, private val data: PointData, pri
         else {
             for (x in logic.rect.left until logic.rect.left + logic.rect.width) {
                 for (y in logic.rect.top until logic.rect.top + logic.rect.height) {
-                    val ic = image!!.getPixelColor(x, y)
+                    val ic = image.getPixelColor(x, y)
                     if (ic.r != logic.color.r || ic.g != logic.color.g || ic.b != logic.color.b) {
                         return false
                     }
