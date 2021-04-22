@@ -14,6 +14,8 @@ import android.media.ImageReader
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.KeyEvent
@@ -31,21 +33,14 @@ class MyService : AccessibilityService() {
     private var channelId = ""
     private var script: AowScript? = null
     private lateinit var mediaProjection: MediaProjection
-    @get:Synchronized
-    @set:Synchronized
     var running = false
     private var serviceStarted = false
-    private var thread: Thread? = null
-    @get:Synchronized
-    @set:Synchronized
     var currentActivity: String? = null
-    @get:Synchronized
-    @set:Synchronized
     var currentPackage: String? = null
-    @get:Synchronized
-    @set:Synchronized
     var pauseUntil = Calendar.getInstance(TimeZone.getTimeZone("UTC")).time.time
     private var toast: Toast? = null
+    private var handler = Looper.myLooper()?.let { Handler(it) }
+    private var task = ScriptRunner()
 
     override fun onCreate() {
         super.onCreate()
@@ -86,7 +81,7 @@ class MyService : AccessibilityService() {
         if (intent != null) {
             when (intent.action) {
                 "START_SERVICE" -> {
-                    startService1(intent.getParcelableExtra("mediaProjectionIntent")!!)
+                    intent.getParcelableExtra<Intent>("mediaProjectionIntent")?.also { startService1(it) }
                 }
                 "AFK" -> {
                     afk()
@@ -128,18 +123,18 @@ class MyService : AccessibilityService() {
     private fun startProjection(intent: Intent) {
         val mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         val display = (getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay
-        val matrics = DisplayMetrics()
-        display.getRealMetrics(matrics)
+        val metrics = DisplayMetrics()
+        display.getRealMetrics(metrics)
         mediaProjection = mediaProjectionManager.getMediaProjection(Activity.RESULT_OK, intent)
-        val width = matrics.widthPixels
-        val height = matrics.heightPixels
+        val width = metrics.widthPixels
+        val height = metrics.heightPixels
         var defaultPointDataJson = ""
         InputStreamReader(assets.open("config.json")).use {
             defaultPointDataJson = getSharedPreferences("pointData", Context.MODE_PRIVATE).getString("pointData", it.readText())!!
         }
         val data = PointDataParser.deserializeJson(defaultPointDataJson, height)
         val imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 3)
-        mediaProjection.createVirtualDisplay("ScreenCapture", width, height, matrics.densityDpi, DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, imageReader.surface, null, null)
+        mediaProjection.createVirtualDisplay("ScreenCapture", width, height, metrics.densityDpi, DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, imageReader.surface, null, null)
         val sp = getSharedPreferences("setting", Context.MODE_PRIVATE)
         script = AowScript(this, data, imageReader).apply {
             waitAdSeconds = sp.getFloat(getString(R.string.wait_ad_seconds), ResourcesCompat.getFloat(resources, R.dimen.wait_ad_seconds))
@@ -169,46 +164,44 @@ class MyService : AccessibilityService() {
 
     private fun stop() {
         running = false
+        handler?.removeCallbacks(task)
         showToast("腳本已停止")
-        thread?.apply {
-            interrupt()
-            join()
-        }
-        thread = null
         updateService()
     }
 
     private fun afk() {
         running = true
+        script?.init()
+        task.run()
         showToast("腳本開始執行")
         updateService()
-        thread = Thread(script).apply { start() }
     }
 
     private fun updateService() {
-        val afkStartIntent = Intent(this, MyService::class.java).apply {
-            action = "AFK"
-        }
-        val stopIntent = Intent(this, MyService::class.java).apply {
-            action = "STOP"
-        }
-        val closeServiceIntent = Intent(this, MyService::class.java).apply {
-            action = "CLOSE"
-        }
-        val notification: Notification = NotificationCompat.Builder(this, channelId).also {
+        NotificationCompat.Builder(this, channelId).also {
+            val closeServiceIntent = Intent(this, MyService::class.java).apply {
+                action = "CLOSE"
+            }
             it.setContentTitle("腳本執行服務")
             it.setContentText("點選「掛機」或按下「\uD83D\uDD08音量-」開始動作")
             it.setSmallIcon(R.drawable.notification_icon_background)
             it.priority = NotificationCompat.PRIORITY_DEFAULT
             if (!running) {
+                val afkStartIntent = Intent(this, MyService::class.java).apply {
+                    action = "AFK"
+                }
                 it.addAction(R.drawable.notification_icon_background, "掛機", PendingIntent.getService(this, 0, afkStartIntent, PendingIntent.FLAG_UPDATE_CURRENT))
             }
             else {
+                val stopIntent = Intent(this, MyService::class.java).apply {
+                    action = "STOP"
+                }
                 it.addAction(R.drawable.notification_icon_background, "停止", PendingIntent.getService(this, 0, stopIntent, PendingIntent.FLAG_UPDATE_CURRENT))
             }
             it.addAction(R.drawable.notification_icon_background, "關閉", PendingIntent.getService(this, 0, closeServiceIntent, PendingIntent.FLAG_UPDATE_CURRENT))
-        }.build()
-        startForeground(1, notification)
+        }.build().also {
+            startForeground(1, it)
+        }
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -221,5 +214,16 @@ class MyService : AccessibilityService() {
         }
         (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(channel)
         return channelID
+    }
+
+    private inner class ScriptRunner : Runnable {
+        override fun run() {
+            script?.also {script->
+                script.tick()
+                handler?.also {handler->
+                    handler.postDelayed(this, (script.detectPeriodSeconds * 1000).toLong())
+                }
+            }
+        }
     }
 }

@@ -2,7 +2,6 @@ package com.aowtest.myapplication
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
-import android.annotation.SuppressLint
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Path
@@ -11,16 +10,15 @@ import android.media.ImageReader
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityWindowInfo
-import android.widget.Toast
 import com.googlecode.tesseract.android.TessBaseAPI
 import java.io.Closeable
 import java.io.File
 import java.util.*
-import kotlin.math.log
 import kotlin.random.Random
-import kotlin.random.nextUInt
 
-class AowScript(private var service: MyService, private var data: PointData, private var imageReader: ImageReader) : Runnable, Closeable {
+class AowScript(private val service: MyService, private val data: PointData, private val imageReader: ImageReader) : Closeable {
+
+    private val utcTimeZone = TimeZone.getTimeZone("UTC")
 
     // 腳本參數
     var waitAdSeconds: Float = 30f
@@ -30,6 +28,11 @@ class AowScript(private var service: MyService, private var data: PointData, pri
     var treasurePeriodSeconds: Float = 3605f
     var minSelfSoldiers: Int = 200
     var detectPeriodSeconds: Float = 1f
+        get() =
+            if (duringRestart) {
+                duringRestart = false
+                10f
+            } else field
     var heroDeadQuit: Boolean = true
 
     // 腳本變數
@@ -37,11 +40,12 @@ class AowScript(private var service: MyService, private var data: PointData, pri
     private var hasCoin = true
     private var headHunt = false
     private var inAdTimes = 0
-    private var lastTreasureTime: Long = 0
+    private var lastTreasureTime = 0L
     private var noAdSingleCounter = 0
     private var noAdCounter = 0
     private var hasActionCount = 0
     private var noActionCount = 0
+    private var duringRestart = false
 
     private var exitAdButton : AccessibilityNodeInfo? = null
     private var image: Image? = null
@@ -53,9 +57,8 @@ class AowScript(private var service: MyService, private var data: PointData, pri
         init(service.cacheDir.absolutePath + File.separator, "aow", TessBaseAPI.OEM_DEFAULT)
     }
 
-    @ExperimentalUnsignedTypes
-    override fun run() {
-        val now =  Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+    fun init() {
+        val now =  Calendar.getInstance(utcTimeZone)
         date = now.get(Calendar.DAY_OF_MONTH)
         hasCoin = true
         headHunt = false
@@ -63,13 +66,6 @@ class AowScript(private var service: MyService, private var data: PointData, pri
         lastTreasureTime = now.time.time
         noAdSingleCounter = 0
         noAdCounter = 0
-        while (service.running) {
-            screenShot()
-            afkTick()
-            try {
-                Thread.sleep((detectPeriodSeconds * 1000).toLong())
-            } catch (ex: InterruptedException) {}
-        }
     }
 
     private fun screenShot() {
@@ -86,11 +82,11 @@ class AowScript(private var service: MyService, private var data: PointData, pri
     }
 
     private fun nodeTravel(nodeInfo: AccessibilityNodeInfo, arr: IntArray, className: String): Boolean {
-        var node: AccessibilityNodeInfo? = nodeInfo
+        var node = nodeInfo
         for (i in arr.iterator()) {
-            node = if (node == null) null else if (i < 0) node.parent else if (node.childCount > i) node.getChild(i) else null
+            node = if (i < 0) node.parent ?: return false else if (node.childCount > i) node.getChild(i) ?: return false else return false
         }
-        if (className == node?.className?.toString()) {
+        if (className == node.className?.toString()) {
             exitAdButton = node
             return true
         }
@@ -118,9 +114,9 @@ class AowScript(private var service: MyService, private var data: PointData, pri
                     nodeTravel(node, intArrayOf(-1, -1, 0, 0), "android.widget.Button")
                 }
                 else if (node.className == "android.widget.TextView") {
-                    if (nodeTravel(node, intArrayOf(-1, -1, -1, -1, 1, 0, 0, 0, -1, -1), "android.widget.LinearLayout"));
-                    else if (nodeTravel(node, intArrayOf(-1, -1, -1, -1, 0, 0, 0, -1, -1), "android.widget.LinearLayout"));
-                    else nodeTravel(node, intArrayOf(-1, -1, -1, -1, -1, 1, 0, 0, 0, -1, -1), "android.widget.LinearLayout")
+                    if (!nodeTravel(node, intArrayOf(-1, -1, -1, -1, 1, 0, 0, 0, -1, -1), "android.widget.LinearLayout"))
+                        if (!nodeTravel(node, intArrayOf(-1, -1, -1, -1, 0, 0, 0, -1, -1), "android.widget.LinearLayout"))
+                            nodeTravel(node, intArrayOf(-1, -1, -1, -1, -1, 1, 0, 0, 0, -1, -1), "android.widget.LinearLayout")
                     if (BuildConfig.DEBUG)
                         Log.d("DEBUG", "exitAdButton: $exitAdButton")
                 }
@@ -140,17 +136,16 @@ class AowScript(private var service: MyService, private var data: PointData, pri
         return inGame
     }
 
-    @ExperimentalUnsignedTypes
     private fun detectInt(image: Image, rect: Rect): Int? {
-        val width = rect.width.toInt()
-        val height = rect.height.toInt()
-        val x = rect.left.toInt()
-        val y = rect.top.toInt()
+        val width = rect.width
+        val height = rect.height
+        val x = rect.left
+        val y = rect.top
         val b = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         for (i in 0 until width) {
             for (j in 0 until height) {
-                val color = image.getPixelColor((x + i).toUShort(), (y + j).toUShort())
-                b.setPixel(i, j, android.graphics.Color.rgb(color.r.toInt(), color.g.toInt(), color.b.toInt()))
+                val color = image.getPixelColor(x + i, y + j)
+                b.setPixel(i, j, android.graphics.Color.rgb(color.r, color.g, color.b))
             }
         }
         tessBaseAPI.setImage(b)
@@ -160,9 +155,8 @@ class AowScript(private var service: MyService, private var data: PointData, pri
         return result.toIntOrNull()
     }
 
-    @ExperimentalUnsignedTypes
-    private fun afkTick() {
-        val calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+    fun tick() {
+        val calendar = Calendar.getInstance(utcTimeZone)
         val date = calendar.get(Calendar.DAY_OF_MONTH)
         val now = calendar.time.time
         if (now < service.pauseUntil) {
@@ -181,6 +175,7 @@ class AowScript(private var service: MyService, private var data: PointData, pri
         var targetWindow = targetRoot?.window
         if (targetWindow?.type != AccessibilityWindowInfo.TYPE_APPLICATION) targetWindow = null
         if (service.currentPackage == "com.addictive.strategy.army" && (service.currentActivity == "com.addictive.strategy.army.UnityPlayerActivity" || isInGame(targetWindow))) {
+            screenShot()
             exitAdButton = null
             if (BuildConfig.DEBUG)
                 Log.d("DEBUG", "In Game!!")
@@ -213,10 +208,13 @@ class AowScript(private var service: MyService, private var data: PointData, pri
             else if (detect(data.logic[21]));
             else if (detect(data.logic[22], ClickWay.NONE, 200, outY)) {
                 val rect = Rect(data.logic[22].rect)
-                rect.top = (outY[0] + rect.top.toInt() - data.logic[22].point.y.toInt()).toUShort()
-                val numberResult = detectInt(image!!, rect)
-                if (numberResult != null && numberResult < minSelfSoldiers) {
-                    pressBack()
+                rect.top = outY[0] + rect.top - data.logic[22].point.y
+                image?.also {image ->
+                    detectInt(image, rect).also {number->
+                        if (number != null && number < minSelfSoldiers) {
+                            pressBack()
+                        }
+                    }
                 }
             }
             else hasAction = false
@@ -230,12 +228,8 @@ class AowScript(private var service: MyService, private var data: PointData, pri
             inAdTimes++
         }
         else if (service.currentPackage == "com.addictive.strategy.army" && service.currentActivity == "com.facebook.ads.AudienceNetworkActivity") {
-            if (windows.none { it.type == AccessibilityWindowInfo.TYPE_SYSTEM } && !BuildConfig.DEBUG) {
-                inAdTimes++
-                click(data.logic[17].rect)
-                pressBack()
-            }
             exitAdButton?.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+            inAdTimes++
         }
         else {
             hasAction = false
@@ -248,65 +242,64 @@ class AowScript(private var service: MyService, private var data: PointData, pri
             noActionCount++
             hasActionCount = 0
         }
-        if (BuildConfig.DEBUG) {
-            return
-        }
-        if (hasCoin && noActionCount * detectPeriodSeconds > gameStuckSeconds || hasActionCount * detectPeriodSeconds > gameStuckSeconds || noAdCounter > noAdTimes || inAdTimes > gameStuckSeconds) {
+        if (hasCoin && noActionCount * detectPeriodSeconds > gameStuckSeconds || hasActionCount * detectPeriodSeconds > gameStuckSeconds || noAdCounter > noAdTimes) {
             restart()
         }
-        else if (inAdTimes >= 32) {
-            pressBack()
+        else if (BuildConfig.DEBUG) {
+            (inAdTimes * detectPeriodSeconds).also {
+                if (it > 32) {
+                    pressBack()
+                    if (it > gameStuckSeconds) {
+                        restart()
+                    }
+                }
+            }
         }
     }
 
     private fun restart() {
-        val intent = Intent(service, MainActivity::class.java)
-        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        intent.action = "RESTART"
-        service.startActivity(intent)
+        service.startActivity(Intent(service, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            action = "RESTART"
+        })
         noActionCount = 0
         hasActionCount = 0
         noAdCounter = 0
         inAdTimes = 0
-        try {
-            Thread.sleep(10000)
-        } catch (ex: InterruptedException) {}
+        duringRestart = true
     }
 
-    @ExperimentalUnsignedTypes
-    private fun click(x: UShort, y: UShort) {
+    private fun click(x: Int, y: Int) {
         if (BuildConfig.DEBUG)
             Log.d("ACTION", "Click ($x, $y)")
-        val path = Path()
-        path.moveTo(x.toFloat(), y.toFloat())
-        val stroke = GestureDescription.StrokeDescription(path, 0, 1)
+        val stroke = GestureDescription.StrokeDescription(Path().apply { moveTo(x.toFloat(), y.toFloat()) }, 0, 1)
         val gesture = GestureDescription.Builder().addStroke(stroke).build()
         service.dispatchGesture(gesture, null, null)
     }
-    @ExperimentalUnsignedTypes
+
     private fun click(rect: Rect) {
-        click(Random.nextUInt(rect.left.toUInt(), rect.left + rect.width).toUShort(),
-            Random.nextUInt(rect.top.toUInt(), rect.top + rect.height).toUShort())
+        click(Random.nextInt(rect.left, rect.left + rect.width + 1),
+            Random.nextInt(rect.top, rect.top + rect.height + 1))
     }
     private fun pressBack() {
         service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
     }
 
-    @ExperimentalUnsignedTypes
     private fun detect(logic: DetectionLogic, way: ClickWay = ClickWay.CLICK, yRange: Int = 0, outY: IntArray? = null): Boolean {
+        val image = this.image?:return false
         if (way != ClickWay.DETECT_RECT) {
             var conditionMetPoint :Point? = null
-            for (i in (logic.point.y.toInt() - yRange)..(logic.point.y.toInt() + yRange)) {
-                val c = image!!.getPixelColor(logic.point.x, i.toUShort())
+            for (i in (logic.point.y - yRange)..(logic.point.y + yRange)) {
+                val c = image.getPixelColor(logic.point.x, i)
                 val radiusPower =
                         (c.r - logic.color.r) * (c.r - logic.color.r) +
-                                (c.g - logic.color.g) * (c.g - logic.color.g) +
-                                (c.b - logic.color.b) * (c.b - logic.color.b)
-                if (radiusPower <= 25u) {
-                    conditionMetPoint = Point(logic.point.x, i.toUShort())
+                        (c.g - logic.color.g) * (c.g - logic.color.g) +
+                        (c.b - logic.color.b) * (c.b - logic.color.b)
+                if (radiusPower <= 25) {
+                    conditionMetPoint = Point(logic.point.x, i)
                     outY?.set(0, i)
                     if (BuildConfig.DEBUG)
-                        Log.d("DETECT", "Detected (${logic.point.x}, ${i.toUShort()}) has color (${c.r}, ${c.g}, ${c.b})")
+                        Log.d("DETECT", "Detected (${logic.point.x}, ${i}) has color (${c.r}, ${c.g}, ${c.b})")
                     break
                 }
             }
@@ -324,9 +317,9 @@ class AowScript(private var service: MyService, private var data: PointData, pri
             }
         }
         else {
-            for (x in logic.rect.left..(logic.rect.left + logic.rect.width - 1u).toUShort()) {
-                for (y in logic.rect.top..(logic.rect.top + logic.rect.height - 1u).toUShort()) {
-                    val ic = image!!.getPixelColor(x.toUShort(), y.toUShort())
+            for (x in logic.rect.left until logic.rect.left + logic.rect.width) {
+                for (y in logic.rect.top until logic.rect.top + logic.rect.height) {
+                    val ic = image!!.getPixelColor(x, y)
                     if (ic.r != logic.color.r || ic.g != logic.color.g || ic.b != logic.color.b) {
                         return false
                     }
@@ -336,7 +329,6 @@ class AowScript(private var service: MyService, private var data: PointData, pri
         return true
     }
 
-    @ExperimentalUnsignedTypes
     private fun noAd(skipAdRect: Rect) {
         noAdSingleCounter++
         if (noAdSingleCounter * detectPeriodSeconds > waitAdSeconds) {
@@ -359,14 +351,15 @@ private enum class ClickWay {
     DETECT_RECT
 }
 
-@ExperimentalUnsignedTypes
-private fun Image.getPixelColor(x: UShort, y: UShort) : Color {
+private fun Image.getPixelColor(x: Int, y: Int) : Color {
     val plane = planes[0]
     val buffer = plane.buffer
-    val offset = y.toInt() * plane.rowStride + x.toInt() * plane.pixelStride
+    val offset = y * plane.rowStride + x * plane.pixelStride
     return Color(
-        buffer[offset].toUByte(),
-        buffer[offset + 1].toUByte(),
-        buffer[offset + 2].toUByte()
+        buffer[offset].toPositiveInt(),
+        buffer[offset + 1].toPositiveInt(),
+        buffer[offset + 2].toPositiveInt()
     )
 }
+
+fun Byte.toPositiveInt() = toInt() and 0xff

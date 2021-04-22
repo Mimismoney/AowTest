@@ -1,6 +1,18 @@
 plugins {
     id 'com.android.application'
     id 'kotlin-android'
+    id 'com.google.gms.google-services'
+    id 'com.google.firebase.crashlytics'
+}
+
+dependencies {
+    //noinspection GradleDependency
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    implementation 'androidx.appcompat:appcompat:1.2.0'
+    implementation project(':tesseract4android')
+    implementation platform('com.google.firebase:firebase-bom:27.1.0')
+    implementation 'com.google.firebase:firebase-analytics-ktx'
+    implementation 'com.google.firebase:firebase-crashlytics-ktx'
 }
 
 android {
@@ -49,16 +61,4 @@ android {
             universalApk true
         }
     }
-}
-
-dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    implementation 'androidx.appcompat:appcompat:1.2.0'
-    implementation project(':tesseract4android')
-//    implementation 'com.rmtheis:tess-two:9.1.0'
-//    implementation 'androidx.core:core-ktx:1.3.2'
-//    implementation 'com.google.android.material:material:1.1.0'
-//    implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
-//    implementation 'androidx.navigation:navigation-fragment-ktx:2.2.2'
-//    implementation 'androidx.navigation:navigation-ui-ktx:2.2.2'
 }

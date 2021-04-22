@@ -5,73 +5,67 @@ import android.util.JsonToken
 import org.json.JSONException
 import java.io.StringReader
 import java.util.regex.Pattern
-import kotlin.math.log
 
-enum class PointRelation {
-    TOP,
-    MIDDLE,
-    BOTTOM
-}
-
-data class Point(var x: UShort, var y: UShort)
-data class Color(var r: UByte, var g: UByte, var b: UByte)
-data class Rect(var left: UShort, var top: UShort, var width: UShort, var height: UShort) {
+class Point(var x: Int, var y: Int)
+class Color(var r: Int, var g: Int, var b: Int)
+class Rect(var left: Int, var top: Int, var width: Int, var height: Int) {
     constructor(rect: Rect) : this(rect.left, rect.top, rect.width, rect.height)
 }
 
-data class DetectionLogic(var point: Point, var color: Color, var rect: Rect)
-data class PointData(var width: UShort, var height: UShort, var logic: Array<DetectionLogic>)
+class DetectionLogic(var point: Point, var color: Color, var rect: Rect)
+class PointData(var width: Int, var height: Int, var logic: Array<DetectionLogic>)
 class PointDataParser {
     companion object {
         fun deserializeJson(input: String, height: Int) : PointData {
-            var pattern = Pattern.compile("//.*$", Pattern.MULTILINE)
-            var mather = pattern.matcher(input)
-            var inputNoComment = mather.replaceAll("")
-            var pointData = PointData(0u, 0u, arrayOf())
-            var reader = JsonReader(StringReader(inputNoComment))
+            val pattern = Pattern.compile("//.*$", Pattern.MULTILINE)
+            val mather = pattern.matcher(input)
+            val inputNoComment = mather.replaceAll("")
+            val pointData = PointData(0, 0, arrayOf())
+            val reader = JsonReader(StringReader(inputNoComment))
             reader.beginObject()
             while (reader.hasNext()) {
                 when (reader.nextName()) {
                     "width" -> {
-                        pointData.width = reader.nextInt().toUShort()
+                        pointData.width = reader.nextInt()
                     }
                     "height" -> {
-                        pointData.height = reader.nextInt().toUShort()
+                        pointData.height = reader.nextInt()
                     }
                     "logic" -> {
-                        pointData.logic = readDetectionLogic(reader, height - pointData.height.toInt() )
+                        pointData.logic = readDetectionLogic(reader, height - pointData.height)
                     }
                 }
             }
             reader.endObject()
             return pointData
         }
+
         private fun readDetectionLogic(reader: JsonReader, heightDiff: Int): Array<DetectionLogic> {
-            var arr = arrayListOf<DetectionLogic>()
+            val arr = arrayListOf<DetectionLogic>()
             reader.beginArray()
             while (reader.hasNext()) {
-                var logic = DetectionLogic(Point(0u, 0u), Color(0u, 0u, 0u), Rect(0u, 0u, 0u, 0u))
+                val logic = DetectionLogic(Point(0, 0), Color(0, 0, 0), Rect(0, 0, 0, 0))
                 reader.beginArray()
                 reader.beginArray()
-                logic.point.x = reader.nextInt().toUShort()
-                logic.point.y = reader.nextInt().toUShort()
+                logic.point.x = reader.nextInt()
+                logic.point.y = reader.nextInt()
                 reader.endArray()
                 reader.beginArray()
-                logic.color.r = reader.nextInt().toUByte()
-                logic.color.g = reader.nextInt().toUByte()
-                logic.color.b = reader.nextInt().toUByte()
+                logic.color.r = reader.nextInt()
+                logic.color.g = reader.nextInt()
+                logic.color.b = reader.nextInt()
                 reader.endArray()
                 reader.beginArray()
-                logic.rect.left = reader.nextInt().toUShort()
-                logic.rect.top = reader.nextInt().toUShort()
-                logic.rect.width = reader.nextInt().toUShort()
-                logic.rect.height = reader.nextInt().toUShort()
+                logic.rect.left = reader.nextInt()
+                logic.rect.top = reader.nextInt()
+                logic.rect.width = reader.nextInt()
+                logic.rect.height = reader.nextInt()
                 reader.endArray()
                 if (reader.peek() == JsonToken.NUMBER) {
-                    logic.point.y = ((heightDiff.toDouble() * reader.nextDouble()) + logic.point.y.toInt()).toShort().toUShort()
+                    logic.point.y = (heightDiff * reader.nextDouble() + logic.point.y).toInt()
                 }
                 if (reader.peek() == JsonToken.NUMBER) {
-                    logic.rect.top = ((heightDiff.toDouble() * reader.nextDouble()) + logic.rect.top.toInt()).toShort().toUShort()
+                    logic.rect.top = (heightDiff * reader.nextDouble() + logic.rect.top).toInt()
                 }
                 reader.endArray()
                 arr.add(logic)
