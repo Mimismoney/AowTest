@@ -16,6 +16,7 @@ import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.PowerManager
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.KeyEvent
@@ -41,6 +42,7 @@ class MyService : AccessibilityService() {
     private var toast: Toast? = null
     private var handler = Looper.myLooper()?.let { Handler(it) }
     private var task = ScriptRunner()
+    private var wakeLock: PowerManager.WakeLock? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -167,12 +169,19 @@ class MyService : AccessibilityService() {
         handler?.removeCallbacks(task)
         showToast("腳本已停止")
         updateService()
+        wakeLock?.release()
+        wakeLock = null
     }
 
     private fun afk() {
         running = true
         script?.init()
         task.run()
+        wakeLock = (getSystemService(Context.POWER_SERVICE) as PowerManager).run {
+            newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MyService::Lock").apply {
+                acquire(365L * 24 * 60 * 60 * 1000)
+            }
+        }
         showToast("腳本開始執行")
         updateService()
     }
