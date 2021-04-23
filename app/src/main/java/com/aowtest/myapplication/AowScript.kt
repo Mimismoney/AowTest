@@ -87,7 +87,7 @@ class AowScript(private val service: MyService, private val data: PointData, pri
     private fun nodeTravel(nodeInfo: AccessibilityNodeInfo, arr: IntArray, className: String): Boolean {
         var node = nodeInfo
         for (i in arr.iterator()) {
-            node = if (i < 0) node.parent ?: return false else if (node.childCount > i) node.getChild(i) ?: return false else return false
+            node = (if (i < 0) node.parent else if (node.childCount > i) node.getChild(i) else null) ?: return false
         }
         if (className == node.className?.toString()) {
             exitAdButton = node
@@ -107,7 +107,7 @@ class AowScript(private val service: MyService, private val data: PointData, pri
             if (BuildConfig.DEBUG) {
                 val rect = android.graphics.Rect()
                 node.getBoundsInScreen(rect)
-                Log.d("ELEM", "${" ".repeat(level)}${node.className} ${node.text} $rect")
+                Log.d("ELEM", "${" ".repeat(level)} $className $text $rect")
             }
             if (text != null) {
                 if (text.contains("秒後可獲得獎勵") || text.contains("剩下") && text.contains("秒")) {
@@ -125,6 +125,9 @@ class AowScript(private val service: MyService, private val data: PointData, pri
                 }
                 else if (node.className == "android.widget.Image") {
                     nodeTravel(node, intArrayOf(-1, -1, 0, 0), "android.widget.Button")
+                }
+                else if (node.className == "android.widget.Button" && node.text.toString().toIntOrNull() != null) {
+                    exitAdButton = node
                 }
             }
             if(className in arrayOf("android.widget.Image", "android.widget.ImageView", "android.widget.Button")) {

@@ -91,11 +91,13 @@ class MainActivity : Activity() {
                 Looper.myLooper()?.let {
                     Handler(it).postDelayed({
                         (getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager).killBackgroundProcesses("com.addictive.strategy.army")
-                        applicationContext.startActivity(Intent().apply {
-                            component = ComponentName("com.addictive.strategy.army", "com.addictive.strategy.army.UnityPlayerActivity")
-                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                        })
-                    }, 3000)
+                        Handler(it).postDelayed({
+                            applicationContext.startActivity(Intent().apply {
+                                component = ComponentName("com.addictive.strategy.army", "com.addictive.strategy.army.UnityPlayerActivity")
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                            })
+                        }, 1000)
+                    }, 1000)
                 }
             }
             "QUIT" -> {
