@@ -42,7 +42,7 @@ class AowScript(private val service: MyService, private val data: PointData, pri
     private var date = 0
     private var hasCoin = true
     private var headHunt = false
-    private var inAdTimes = 0
+    private var inAdCount = 0
     private var lastTreasureTime = 0L
     private var noAdSingleCounter = 0
     private var noAdCounter = 0
@@ -65,7 +65,7 @@ class AowScript(private val service: MyService, private val data: PointData, pri
         date = now.get(Calendar.DAY_OF_MONTH)
         hasCoin = true
         headHunt = false
-        inAdTimes = 0
+        inAdCount = 0
         lastTreasureTime = now.time.time
         noAdSingleCounter = 0
         noAdCounter = 0
@@ -155,7 +155,7 @@ class AowScript(private val service: MyService, private val data: PointData, pri
             }
         }
         tessBaseAPI.setImage(b)
-        val result = tessBaseAPI.utF8Text
+        val result = tessBaseAPI.utF8Text?:""
         if (BuildConfig.DEBUG)
             Log.d("TESS", "Text recognized as $result")
         return result.toIntOrNull()
@@ -175,6 +175,7 @@ class AowScript(private val service: MyService, private val data: PointData, pri
             headHunt = true
         }
         var hasAction = true
+        var inAd = false
 
         val windows = service.windows
         val targetRoot = service.rootInActiveWindow
@@ -185,7 +186,7 @@ class AowScript(private val service: MyService, private val data: PointData, pri
             exitAdButton = null
             if (BuildConfig.DEBUG)
                 Log.d("DEBUG", "In Game!!")
-            inAdTimes = 0
+            inAdCount = 0
             val outY = intArrayOf(0)
             if (windows.any { it.type == AccessibilityWindowInfo.TYPE_SYSTEM })
                 hasAction = false
@@ -237,33 +238,40 @@ class AowScript(private val service: MyService, private val data: PointData, pri
             else hasAction = false
         }
         else if (service.currentPackage == "com.android.vending" && service.currentActivity == "com.google.android.finsky.activities.MarketDeepLinkHandlerActivity") {
-            inAdTimes++
+            inAd = true
             pressBack()
         }
         else if (service.currentPackage == "com.addictive.strategy.army" && service.currentActivity == "com.google.android.gms.ads.AdActivity") {
+            inAd = true
             exitAdButton?.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-            inAdTimes++
         }
         else if (service.currentPackage == "com.addictive.strategy.army" && service.currentActivity == "com.facebook.ads.AudienceNetworkActivity") {
+            inAd = true
             exitAdButton?.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-            inAdTimes++
         }
         else {
             hasAction = false
         }
+        if (inAd) {
+            inAdCount++
+            hasActionCount = 0
+            noActionCount = 0
+        }
         if (hasAction) {
             hasActionCount++
             noActionCount = 0
+            inAdCount = 0
         }
         else {
             noActionCount++
             hasActionCount = 0
+            inAdCount = 0
         }
         if (hasCoin && noActionCount * detectPeriodSeconds > gameStuckSeconds || hasActionCount * detectPeriodSeconds > gameStuckSeconds || noAdCounter > noAdTimes) {
             restart()
         }
         else if (!BuildConfig.DEBUG) {
-            (inAdTimes * detectPeriodSeconds).also {
+            (inAdCount * detectPeriodSeconds).also {
                 if (it > 32) {
                     pressBack()
                     if (it > gameStuckSeconds) {
@@ -282,7 +290,7 @@ class AowScript(private val service: MyService, private val data: PointData, pri
         noActionCount = 0
         hasActionCount = 0
         noAdCounter = 0
-        inAdTimes = 0
+        inAdCount = 0
         duringRestart = true
     }
 
@@ -290,7 +298,7 @@ class AowScript(private val service: MyService, private val data: PointData, pri
         if (BuildConfig.DEBUG)
             Log.d("ACTION", "Click ($x, $y)")
         val stroke = GestureDescription.StrokeDescription(Path().apply { moveTo(x.toFloat(), y.toFloat()) }, 0, 1)
-        val gesture = GestureDescription.Builder().addStroke(stroke).build()
+        val gesture = GestureDescription.Builder().addStroke(stroke).build()?:return
         service.dispatchGesture(gesture, null, null)
     }
 
@@ -302,11 +310,11 @@ class AowScript(private val service: MyService, private val data: PointData, pri
         service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
     }
 
-    private fun detect(logic: DetectionLogic, way: ClickWay = ClickWay.CLICK, yRange: Boolean = false, outY: IntArray? = null): Boolean {
+    private fun detect(logic: DetectionLogic, way: ClickWay = ClickWay.CLICK, isYRange: Boolean = false, outY: IntArray? = null): Boolean {
         val image = this.image?:return false
         if (way != ClickWay.DETECT_RECT) {
             var conditionMetPoint :Point? = null
-            for (i in (if (yRange) (0 until image.height) else (logic.point.y..logic.point.y))) {
+            for (i in (if (isYRange) (0 until image.height) else (logic.point.y..logic.point.y))) {
                 val c = image.getPixelColor(logic.point.x, i)
                 val radiusPower =
                         (c.r - logic.color.r) * (c.r - logic.color.r) +
@@ -322,7 +330,7 @@ class AowScript(private val service: MyService, private val data: PointData, pri
             }
             if (conditionMetPoint == null) return false
             if (way == ClickWay.CLICK) {
-                if (!yRange) {
+                if (!isYRange) {
                     click(logic.rect)
                 }
                 else {
@@ -369,14 +377,17 @@ private enum class ClickWay {
 }
 
 private fun Image.getPixelColor(x: Int, y: Int) : Color {
-    val plane = planes[0]
-    val buffer = plane.buffer
-    val offset = y * plane.rowStride + x * plane.pixelStride
-    return Color(
-        buffer[offset].toPositiveInt(),
-        buffer[offset + 1].toPositiveInt(),
-        buffer[offset + 2].toPositiveInt()
-    )
+    do {
+        val plane = planes[0] ?: break
+        val buffer = plane.buffer ?: break
+        val offset = y * plane.rowStride + x * plane.pixelStride
+        return Color(
+            buffer[offset].toPositiveInt(),
+            buffer[offset + 1].toPositiveInt(),
+            buffer[offset + 2].toPositiveInt()
+        )
+    } while (false)
+    return Color(0, 0, 0)
 }
 
 fun Byte.toPositiveInt() = toInt() and 0xff

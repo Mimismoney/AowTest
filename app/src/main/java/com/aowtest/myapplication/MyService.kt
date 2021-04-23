@@ -123,15 +123,14 @@ class MyService : AccessibilityService() {
     private fun startProjection(intent: Intent) {
         val mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         val display = (getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay
-        val metrics = DisplayMetrics()
-        display.getRealMetrics(metrics)
+        val metrics = DisplayMetrics().apply { display.getRealMetrics(this) }
         mediaProjection = mediaProjectionManager.getMediaProjection(Activity.RESULT_OK, intent)
         val width = metrics.widthPixels
         val height = metrics.heightPixels
         val data = PointDataParser.deserializeJson(InputStreamReader(assets.open("config.json")).use { it.readText() }, width, height)
         val imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 3)
         mediaProjection.createVirtualDisplay("ScreenCapture", width, height, metrics.densityDpi, DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, imageReader.surface, null, null)
-        val sp = getSharedPreferences("setting", Context.MODE_PRIVATE)
+        val sp = getSharedPreferences("setting", Context.MODE_PRIVATE) ?: return
         script = AowScript(this, data, imageReader).apply {
             waitAdSeconds = sp.getFloat(getString(R.string.wait_ad_seconds), ResourcesCompat.getFloat(resources, R.dimen.wait_ad_seconds))
             stuckAdSeconds = sp.getFloat(getString(R.string.stuck_ad_seconds), ResourcesCompat.getFloat(resources, R.dimen.stuck_ad_seconds))
@@ -148,14 +147,8 @@ class MyService : AccessibilityService() {
     override fun onKeyEvent(event: KeyEvent?): Boolean {
         if (BuildConfig.DEBUG)
             Log.d("KEY", "${event?.keyCode}")
-        if (!serviceStarted || event == null || event.keyCode != KeyEvent.KEYCODE_VOLUME_DOWN || event.action != KeyEvent.ACTION_DOWN)
-            return super.onKeyEvent(event)
-        if (running) {
-            stop()
-        }
-        else {
-            afk()
-        }
+        if (serviceStarted && event != null && event.keyCode == KeyEvent.KEYCODE_VOLUME_DOWN && event.action == KeyEvent.ACTION_DOWN)
+            if (running) stop() else afk()
         return false
     }
 
@@ -217,9 +210,7 @@ class MyService : AccessibilityService() {
         override fun run() {
             script?.also {script->
                 script.tick()
-                handler?.also {handler->
-                    handler.postDelayed(this, (script.detectPeriodSeconds * 1000).toLong())
-                }
+                handler?.postDelayed(this, (script.detectPeriodSeconds * 1000).toLong())
             }
         }
     }

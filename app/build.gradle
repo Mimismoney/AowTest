@@ -16,29 +16,22 @@ dependencies {
 }
 
 def getVersionCode = { ->
-    try {
-        def code = new ByteArrayOutputStream()
-        exec {
-            commandLine 'git', 'rev-list', '--first-parent', '--count', 'HEAD'
-            standardOutput = code
-        }
-        return Integer.parseInt(code.toString().split("\n")[0])
-    } catch (ignored) {
-        return -1
+    def code = new ByteArrayOutputStream()
+    exec {
+        commandLine 'git', 'rev-list', '--first-parent', '--count', 'HEAD'
+        standardOutput = code
     }
+    return Integer.parseInt(code.toString().split("\n")[0])
 }
 
 def getVersionName = { ->
-    try {
-        def code = new ByteArrayOutputStream()
-        exec {
-            commandLine 'git', 'describe', '--always', '--tags', '--dirty'
-            standardOutput = code
-        }
-        return "1.2.2-" + code.toString().split("\n")[0].trim()
-    } catch (ignored) {
-        return null
+    def code = new ByteArrayOutputStream()
+    exec {
+        commandLine 'git', 'describe', '--always', '--tags', '--dirty'
+        standardOutput = code
     }
+    def v = "1.2.3-${code.toString().split("\n")[0].trim()}"
+    return  v
 }
 
 android {
@@ -67,6 +60,7 @@ android {
         debug {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules-debug.pro'
+            versionNameSuffix "-debug"
         }
     }
     lintOptions {
