@@ -35,7 +35,7 @@ def getVersionName = { ->
             commandLine 'git', 'describe', '--always', '--tags', '--dirty'
             standardOutput = code
         }
-        return "1.2.0-" + code.toString().split("\n")[0].trim()
+        return "1.2.1-" + code.toString().split("\n")[0].trim()
     } catch (ignored) {
         return null
     }

@@ -259,7 +259,7 @@ class AowScript(private val service: MyService, private val data: PointData, pri
         if (hasCoin && noActionCount * detectPeriodSeconds > gameStuckSeconds || hasActionCount * detectPeriodSeconds > gameStuckSeconds || noAdCounter > noAdTimes) {
             restart()
         }
-        else if (BuildConfig.DEBUG) {
+        else if (!BuildConfig.DEBUG) {
             (inAdTimes * detectPeriodSeconds).also {
                 if (it > 32) {
                     pressBack()
