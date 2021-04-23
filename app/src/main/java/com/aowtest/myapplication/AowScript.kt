@@ -191,8 +191,6 @@ class AowScript(private val service: MyService, private val data: PointData, pri
             else if (headHunt && detect(data.logic[1])) ;
             else if (headHunt && detect(data.logic[2])) ;
             else if (!headHunt && detect(data.logic[3])) ;
-            else if (detect(data.logic[4], ClickWay.PRESS_BACK, true))
-                headHunt = false
             else if (hasCoin && detect(data.logic[5])) ;
             else if (detect(data.logic[6], ClickWay.NONE))
                 noAd(data.logic[6].rect)
@@ -215,11 +213,13 @@ class AowScript(private val service: MyService, private val data: PointData, pri
             } else if (detect(data.logic[10])) ;
             else if (detect(data.logic[11])) ;
             else if (detect(data.logic[12])) ;
-            else if (detect(data.logic[13], ClickWay.CLICK, true)) ;
             else if (detect(data.logic[14])) ;
             else if (detect(data.logic[15])) ;
             else if (heroDeadQuit && detect(data.logic[16], ClickWay.PRESS_BACK));
             else if (detect(data.logic[21]));
+            else if (detect(data.logic[13], ClickWay.CLICK, true)) ;
+            else if (detect(data.logic[4], ClickWay.PRESS_BACK, true))
+                headHunt = false
             else if (detect(data.logic[22], ClickWay.NONE, true, outY)) {
                 val rect = Rect(data.logic[22].rect)
                 rect.top = outY[0] + rect.top - data.logic[22].point.y
