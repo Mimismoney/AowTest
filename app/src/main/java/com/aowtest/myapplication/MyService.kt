@@ -25,6 +25,7 @@ import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.content.res.ResourcesCompat
+import com.toastfix.toastcompatwrapper.ToastHandler
 import java.io.InputStreamReader
 import java.util.*
 
@@ -33,7 +34,7 @@ class MyService : AccessibilityService() {
     private var channelId = ""
     private var script: AowScript? = null
     private lateinit var mediaProjection: MediaProjection
-    var running = false
+    private var running = false
     private var serviceStarted = false
     var currentActivity: String? = null
     var currentPackage: String? = null
@@ -97,9 +98,9 @@ class MyService : AccessibilityService() {
         return Service.START_NOT_STICKY
     }
 
-    private fun showToast(charSequence: CharSequence, duration: Int = Toast.LENGTH_SHORT) {
+    private fun showToast(str: String, duration: Int = Toast.LENGTH_SHORT) {
         toast?.cancel()
-        toast = Toast.makeText(this, charSequence, duration).apply { show() }
+        toast = ToastHandler.getToastInstance(applicationContext, str, duration).apply { show() }
     }
 
     private fun startService1(intent: Intent) {
@@ -122,7 +123,7 @@ class MyService : AccessibilityService() {
     @SuppressLint("WrongConstant")
     private fun startProjection(intent: Intent) {
         val mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-        val display = (getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay
+        @Suppress("DEPRECATION") val display = (getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay
         val metrics = DisplayMetrics().apply { display.getRealMetrics(this) }
         mediaProjection = mediaProjectionManager.getMediaProjection(Activity.RESULT_OK, intent)
         val width = metrics.widthPixels

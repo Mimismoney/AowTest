@@ -13,7 +13,6 @@ import android.os.Looper
 import android.provider.Settings
 import android.text.Editable
 import android.util.DisplayMetrics
-import android.util.Log
 import android.view.View
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityManager
@@ -23,8 +22,8 @@ import android.widget.EditText
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
+import com.toastfix.toastcompatwrapper.ToastHandler
 import java.io.File
-import java.io.InputStreamReader
 
 class MainActivity : Activity() {
 
@@ -38,7 +37,10 @@ class MainActivity : Activity() {
     private lateinit var heroDeadQuitCheck: CheckBox
     private lateinit var finishQuitGameCheck: CheckBox
     private lateinit var crashTestButton: Button
-    private val REQUEST_SCREEN_CAP = 1
+
+    companion object {
+        private const val REQUEST_SCREEN_CAP = 1
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         onIntent(intent)
@@ -71,9 +73,9 @@ class MainActivity : Activity() {
         if (!tessdataDir.exists()) {
             tessdataDir.mkdirs()
         }
-        val aowTrainDataPath = File(tessdataDir.absolutePath + File.separator + "aow.traineddata")
+        val aowTrainDataPath = File(tessdataDir.absolutePath + File.separator + "digits.traineddata")
         if (!aowTrainDataPath.exists()) {
-            assets.open("aow.traineddata").copyTo(aowTrainDataPath.outputStream())
+            assets.open("digits.traineddata").copyTo(aowTrainDataPath.outputStream())
         }
         return super.onCreate(savedInstanceState)
     }
@@ -111,7 +113,8 @@ class MainActivity : Activity() {
         }
     }
 
-    fun onStartServiceClick(view: View) {
+
+    fun onStartServiceClick(@Suppress("UNUSED_PARAMETER") view: View) {
         try {
             getSharedPreferences("setting", Context.MODE_PRIVATE).edit()
                 .putFloat(
@@ -149,23 +152,20 @@ class MainActivity : Activity() {
                 )
                 .apply()
         } catch (ex: NumberFormatException) {
-            Toast.makeText(this, "數值輸入錯誤", Toast.LENGTH_SHORT).show()
+            ToastHandler.showToast(this, "數值輸入錯誤", Toast.LENGTH_SHORT)
             return
         }
+        @Suppress("DEPRECATION")
         val display = (getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay
-        val matrics = DisplayMetrics()
-        display.getRealMetrics(matrics)
-        var pointDataJson = ""
-        InputStreamReader(assets.open("config.json")).use {
-            pointDataJson = getSharedPreferences("pointData", Context.MODE_PRIVATE).getString("pointData", it.readText())!!
-        }
+        val metrics = DisplayMetrics()
+        display.getRealMetrics(metrics)
         val accessibilityManager = getSystemService(Context.ACCESSIBILITY_SERVICE) as AccessibilityManager
         val serviceInfo = accessibilityManager.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_GENERIC).find {
             val enabledServiceInfo = it.resolveInfo.serviceInfo
             enabledServiceInfo.packageName == packageName && enabledServiceInfo.name == MyService::class.java.name
         }
         if (serviceInfo == null) {
-            Toast.makeText(this, "請開啟無障礙設定", Toast.LENGTH_SHORT).show()
+            ToastHandler.showToast(this, "請開啟無障礙設定", Toast.LENGTH_SHORT)
             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
             })
@@ -187,12 +187,13 @@ class MainActivity : Activity() {
                     serviceIntent.putExtra("mediaProjectionIntent", data)
                     ContextCompat.startForegroundService(this, serviceIntent)
                 } else {
-                    Toast.makeText(this, "無法取得螢幕權限", Toast.LENGTH_SHORT).show()
+                    ToastHandler.showToast(this, "無法取得螢幕權限", Toast.LENGTH_SHORT)
                 }
             }
         }
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun onCrashClick(view: View) {
         throw java.lang.Exception("Test firebase")
     }

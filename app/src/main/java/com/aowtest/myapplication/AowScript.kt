@@ -56,8 +56,8 @@ class AowScript(private val service: MyService, private val data: PointData, pri
         setVariable(TessBaseAPI.VAR_CHAR_WHITELIST, "0123456789")
         setVariable("load_system_dawg", TessBaseAPI.VAR_FALSE)
         setVariable("load_freq_dawg", TessBaseAPI.VAR_FALSE)
-        pageSegMode = TessBaseAPI.PageSegMode.PSM_RAW_LINE
-        init(service.cacheDir.absolutePath + File.separator, "aow", TessBaseAPI.OEM_DEFAULT)
+        pageSegMode = TessBaseAPI.PageSegMode.PSM_SINGLE_WORD
+        init(service.cacheDir.absolutePath + File.separator, "digits", TessBaseAPI.OEM_DEFAULT)
     }
 
     fun init() {
@@ -151,16 +151,18 @@ class AowScript(private val service: MyService, private val data: PointData, pri
         for (i in 0 until width) {
             for (j in 0 until height) {
                 val color = image.getPixelColor(x + i, y + j)
-                b.setPixel(i, j, android.graphics.Color.rgb(color.r, color.g, color.b))
+                val color2 = if (color.r < 100 && color.g < 100 && color.b < 100) Color(255, 255, 255) else Color(255 - color.r, 255 - color.g, 255 - color.b)
+                b.setPixel(i, j, android.graphics.Color.rgb(color2.r, color2.g, color2.b))
             }
         }
         tessBaseAPI.setImage(b)
-        val result = tessBaseAPI.utF8Text?:""
+        val result = tessBaseAPI.utF8Text
         if (BuildConfig.DEBUG)
             Log.d("TESS", "Text recognized as $result")
-        return result.toIntOrNull()
+        return result?.toIntOrNull()
     }
 
+    @Suppress("ControlFlowWithEmptyBody")
     fun tick() {
         val calendar = Calendar.getInstance(utcTimeZone)
         val date = calendar.get(Calendar.DAY_OF_MONTH)
@@ -179,8 +181,7 @@ class AowScript(private val service: MyService, private val data: PointData, pri
 
         val windows = service.windows
         val targetRoot = service.rootInActiveWindow
-        var targetWindow = targetRoot?.window
-        if (targetWindow?.type != AccessibilityWindowInfo.TYPE_APPLICATION) targetWindow = null
+        val targetWindow = targetRoot?.window?.let {target-> if (target.type == AccessibilityWindowInfo.TYPE_APPLICATION) target else null }
         if (service.currentPackage == "com.addictive.strategy.army" && (service.currentActivity == "com.addictive.strategy.army.UnityPlayerActivity" || isInGame(targetWindow))) {
             screenShot()
             exitAdButton = null
@@ -203,15 +204,8 @@ class AowScript(private val service: MyService, private val data: PointData, pri
             else if (detect(data.logic[8], ClickWay.NONE)) {
                 if (detect(data.logic[9], ClickWay.DETECT_RECT)) {
                     hasCoin = false
-                    if (finishQuitGame) {
-                        Looper.myLooper()?.run { Handler(this) }?.post {
-                            service.stop()
-                            service.startActivity(Intent(Intent.ACTION_MAIN).apply {
-                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                addCategory(Intent.CATEGORY_HOME)
-                            })
-                        }
-                    }
+                    if (finishQuitGame)
+                        stopGame()
                 }
                 click(if (hasCoin) data.logic[8].rect else data.logic[6].rect)
             } else if (detect(data.logic[10])) ;
@@ -225,9 +219,9 @@ class AowScript(private val service: MyService, private val data: PointData, pri
             else if (detect(data.logic[4], ClickWay.PRESS_BACK, true))
                 headHunt = false
             else if (detect(data.logic[22], ClickWay.NONE, true, outY)) {
-                val rect = Rect(data.logic[22].rect)
-                rect.top = outY[0] + rect.top - data.logic[22].point.y
                 image?.also {image ->
+                    val rect = Rect(data.logic[22].rect)
+                    rect.top = outY[0] + rect.top - data.logic[22].point.y - 3 * image.width / data.width
                     detectInt(image, rect).also {number->
                         if (number != null && number < minSelfSoldiers) {
                             pressBack()
@@ -252,20 +246,22 @@ class AowScript(private val service: MyService, private val data: PointData, pri
         else {
             hasAction = false
         }
-        if (inAd) {
-            inAdCount++
-            hasActionCount = 0
-            noActionCount = 0
-        }
-        if (hasAction) {
-            hasActionCount++
-            noActionCount = 0
-            inAdCount = 0
-        }
-        else {
-            noActionCount++
-            hasActionCount = 0
-            inAdCount = 0
+        when {
+            inAd -> {
+                inAdCount++
+                hasActionCount = 0
+                noActionCount = 0
+            }
+            hasAction -> {
+                hasActionCount++
+                noActionCount = 0
+                inAdCount = 0
+            }
+            else -> {
+                noActionCount++
+                hasActionCount = 0
+                inAdCount = 0
+            }
         }
         if (hasCoin && noActionCount * detectPeriodSeconds > gameStuckSeconds || hasActionCount * detectPeriodSeconds > gameStuckSeconds || noAdCounter > noAdTimes) {
             restart()
@@ -279,6 +275,16 @@ class AowScript(private val service: MyService, private val data: PointData, pri
                     }
                 }
             }
+        }
+    }
+
+    private fun stopGame() {
+        Looper.myLooper()?.run { Handler(this) }?.post {
+            service.stop()
+            service.startActivity(Intent(Intent.ACTION_MAIN).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                addCategory(Intent.CATEGORY_HOME)
+            })
         }
     }
 
@@ -377,7 +383,8 @@ private enum class ClickWay {
 }
 
 private fun Image.getPixelColor(x: Int, y: Int) : Color {
-    do {
+    while (true) {
+        if (x >= width || y >= height) break
         val plane = planes[0] ?: break
         val buffer = plane.buffer ?: break
         val offset = y * plane.rowStride + x * plane.pixelStride
@@ -386,8 +393,8 @@ private fun Image.getPixelColor(x: Int, y: Int) : Color {
             buffer[offset + 1].toPositiveInt(),
             buffer[offset + 2].toPositiveInt()
         )
-    } while (false)
-    return Color(0, 0, 0)
+    }
+    throw IllegalAccessException()
 }
 
 fun Byte.toPositiveInt() = toInt() and 0xff

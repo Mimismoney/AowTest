@@ -13,6 +13,7 @@ dependencies {
     implementation platform('com.google.firebase:firebase-bom:27.1.0')
     implementation 'com.google.firebase:firebase-analytics-ktx'
     implementation 'com.google.firebase:firebase-crashlytics-ktx'
+    implementation 'com.toastfix:toastcompatwrapper:1.2.0'
 }
 
 def getVersionCode = { ->
@@ -53,6 +54,10 @@ android {
             shrinkResources true
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            resValue("bool", "DEBUG", "false")
+            firebaseCrashlytics {
+                mappingFileUploadEnabled true
+            }
             ndk {
                 debugSymbolLevel "FULL"
             }
@@ -61,6 +66,7 @@ android {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules-debug.pro'
             versionNameSuffix "-debug"
+            resValue("bool", "DEBUG", "true")
         }
     }
     lintOptions {
