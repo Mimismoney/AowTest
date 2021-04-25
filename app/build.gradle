@@ -10,9 +10,9 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     implementation 'androidx.appcompat:appcompat:1.2.0'
     implementation project(':tesseract4android')
-    implementation platform('com.google.firebase:firebase-bom:27.1.0')
-    implementation 'com.google.firebase:firebase-analytics-ktx'
-    implementation 'com.google.firebase:firebase-crashlytics-ktx'
+    releaseImplementation platform('com.google.firebase:firebase-bom:27.1.0')
+    releaseImplementation 'com.google.firebase:firebase-analytics-ktx'
+    releaseImplementation 'com.google.firebase:firebase-crashlytics-ktx'
 }
 
 def getVersionCode = { ->
@@ -30,7 +30,7 @@ def getVersionName = { ->
         commandLine 'git', 'describe', '--always', '--tags', '--dirty'
         standardOutput = code
     }
-    def v = "1.2.3-${code.toString().split("\n")[0].trim()}"
+    def v = "1.2.4-${code.toString().split("\n")[0].trim()}"
     return  v
 }
 
@@ -53,7 +53,6 @@ android {
             shrinkResources true
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            resValue("bool", "DEBUG", "false")
             firebaseCrashlytics {
                 mappingFileUploadEnabled true
             }
@@ -65,7 +64,6 @@ android {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules-debug.pro'
             versionNameSuffix "-debug"
-            resValue("bool", "DEBUG", "true")
         }
     }
     lintOptions {
