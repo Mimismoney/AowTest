@@ -13,7 +13,6 @@ dependencies {
     implementation platform('com.google.firebase:firebase-bom:27.1.0')
     implementation 'com.google.firebase:firebase-analytics-ktx'
     implementation 'com.google.firebase:firebase-crashlytics-ktx'
-    implementation 'com.toastfix:toastcompatwrapper:1.2.0'
 }
 
 def getVersionCode = { ->

@@ -25,7 +25,6 @@ import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.content.res.ResourcesCompat
-import com.toastfix.toastcompatwrapper.ToastHandler
 import java.io.InputStreamReader
 import java.util.*
 
@@ -39,7 +38,6 @@ class MyService : AccessibilityService() {
     var currentActivity: String? = null
     var currentPackage: String? = null
     var pauseUntil = Calendar.getInstance(TimeZone.getTimeZone("UTC")).time.time
-    private var toast: Toast? = null
     private var handler = Looper.myLooper()?.let { Handler(it) }
     private var task = ScriptRunner()
 
@@ -98,9 +96,8 @@ class MyService : AccessibilityService() {
         return Service.START_NOT_STICKY
     }
 
-    private fun showToast(str: String, duration: Int = Toast.LENGTH_SHORT) {
-        toast?.cancel()
-        toast = ToastHandler.getToastInstance(applicationContext, str, duration).apply { show() }
+    private fun showToast(charSequence: CharSequence, duration: Int = Toast.LENGTH_SHORT) {
+        ToastUtil.showToast(applicationContext, charSequence, duration)
     }
 
     private fun startService1(intent: Intent) {
@@ -164,6 +161,7 @@ class MyService : AccessibilityService() {
         if (mediaProjection == null) {
             startActivity(Intent(this, MainActivity::class.java))
             stopService1()
+            showToast("無法取得螢幕權限，請重新開啟服務")
             return
         }
         running = true

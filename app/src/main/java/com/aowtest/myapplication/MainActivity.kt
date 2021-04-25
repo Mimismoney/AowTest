@@ -22,7 +22,6 @@ import android.widget.EditText
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
-import com.toastfix.toastcompatwrapper.ToastHandler
 import java.io.File
 
 class MainActivity : Activity() {
@@ -152,7 +151,7 @@ class MainActivity : Activity() {
                 )
                 .apply()
         } catch (ex: NumberFormatException) {
-            ToastHandler.showToast(this, "數值輸入錯誤", Toast.LENGTH_SHORT)
+            ToastUtil.showToast(this, "數值輸入錯誤", Toast.LENGTH_SHORT)
             return
         }
         @Suppress("DEPRECATION")
@@ -165,7 +164,7 @@ class MainActivity : Activity() {
             enabledServiceInfo.packageName == packageName && enabledServiceInfo.name == MyService::class.java.name
         }
         if (serviceInfo == null) {
-            ToastHandler.showToast(this, "請開啟無障礙設定", Toast.LENGTH_SHORT)
+            ToastUtil.showToast(this, "請開啟無障礙設定", Toast.LENGTH_SHORT)
             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
             })
@@ -187,7 +186,7 @@ class MainActivity : Activity() {
                     serviceIntent.putExtra("mediaProjectionIntent", data)
                     ContextCompat.startForegroundService(this, serviceIntent)
                 } else {
-                    ToastHandler.showToast(this, "無法取得螢幕權限", Toast.LENGTH_SHORT)
+                    ToastUtil.showToast(this, "無法取得螢幕權限", Toast.LENGTH_SHORT)
                 }
             }
         }
