@@ -39,6 +39,7 @@ class MainActivity : Activity() {
 
     companion object {
         private const val REQUEST_SCREEN_CAP = 1
+        private var mediaProjectionIntent: Intent? = null
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -170,22 +171,34 @@ class MainActivity : Activity() {
             })
             return
         }
-        val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-        val intent = projectionManager.createScreenCaptureIntent()
-        startActivityForResult(intent, REQUEST_SCREEN_CAP)
+        if (mediaProjectionIntent == null) {
+            val projectionManager =
+                getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+            val intent = projectionManager.createScreenCaptureIntent()
+            startActivityForResult(intent, REQUEST_SCREEN_CAP)
+        }
+        else {
+            startAFKService()
+        }
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
+    private fun startAFKService() {
+        val serviceIntent = Intent(this, MyService::class.java).apply {
+            action = "START_SERVICE"
+        }
+        serviceIntent.putExtra("mediaProjectionIntent", mediaProjectionIntent)
+        ContextCompat.startForegroundService(this, serviceIntent)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, intent: Intent?) {
+        super.onActivityResult(requestCode, resultCode, intent)
         when (requestCode) {
             REQUEST_SCREEN_CAP -> {
                 if (resultCode == RESULT_OK) {
-                    val serviceIntent = Intent(this, MyService::class.java).apply {
-                        action = "START_SERVICE"
-                    }
-                    serviceIntent.putExtra("mediaProjectionIntent", data)
-                    ContextCompat.startForegroundService(this, serviceIntent)
+                    mediaProjectionIntent = intent
+                    startAFKService()
                 } else {
+                    mediaProjectionIntent = null
                     ToastUtil.showToast(this, "無法取得螢幕權限", Toast.LENGTH_SHORT)
                 }
             }

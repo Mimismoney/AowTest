@@ -40,6 +40,9 @@ class MyService : AccessibilityService() {
     var pauseUntil = Calendar.getInstance(TimeZone.getTimeZone("UTC")).time.time
     private var handler = Looper.myLooper()?.let { Handler(it) }
     private var task = ScriptRunner()
+    companion object {
+        private var mediaProjectionIntent: Intent? = null
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -102,9 +105,9 @@ class MyService : AccessibilityService() {
 
     private fun startService1(intent: Intent) {
         serviceStarted = true
+        mediaProjectionIntent = intent
         showToast("已開啟服務，點選通知欄「掛機」或按下「\uD83D\uDD08音量-」開始動作", Toast.LENGTH_LONG)
         updateService()
-        startProjection(intent)
     }
 
     private fun stopService1() {
@@ -118,17 +121,24 @@ class MyService : AccessibilityService() {
     }
 
     @SuppressLint("WrongConstant")
-    private fun startProjection(intent: Intent) {
+    private fun startProjection() : Boolean {
+        val mediaProjectionIntent = mediaProjectionIntent
+        if (mediaProjectionIntent == null) {
+            startActivity(Intent(this, MainActivity::class.java))
+            stopService1()
+            showToast("無法取得螢幕權限，請重新開啟服務")
+            return false
+        }
         val mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         @Suppress("DEPRECATION") val display = (getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay
         val metrics = DisplayMetrics().apply { display.getRealMetrics(this) }
-        mediaProjection = mediaProjectionManager.getMediaProjection(Activity.RESULT_OK, intent)
+        mediaProjection = mediaProjectionManager.getMediaProjection(Activity.RESULT_OK, mediaProjectionIntent)
         val width = metrics.widthPixels
         val height = metrics.heightPixels
         val data = PointDataParser.deserializeJson(InputStreamReader(assets.open("config.json")).use { it.readText() }, width, height)
         val imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 3)
         mediaProjection?.createVirtualDisplay("ScreenCapture", width, height, metrics.densityDpi, DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, imageReader.surface, null, null)
-        val sp = getSharedPreferences("setting", Context.MODE_PRIVATE) ?: return
+        val sp = getSharedPreferences("setting", Context.MODE_PRIVATE)
         script = AowScript(this, data, imageReader).apply {
             waitAdSeconds = sp.getFloat(getString(R.string.wait_ad_seconds), ResourcesCompat.getFloat(resources, R.dimen.wait_ad_seconds))
             stuckAdSeconds = sp.getFloat(getString(R.string.stuck_ad_seconds), ResourcesCompat.getFloat(resources, R.dimen.stuck_ad_seconds))
@@ -140,6 +150,7 @@ class MyService : AccessibilityService() {
             heroDeadQuit = sp.getBoolean(getString(R.string.hero_dead_quit), resources.getBoolean(R.bool.hero_dead_quit))
             finishQuitGame = sp.getBoolean(getString(R.string.finish_quit_game), resources.getBoolean(R.bool.finish_quit_game))
         }
+        return true
     }
 
     override fun onKeyEvent(event: KeyEvent?): Boolean {
@@ -153,17 +164,14 @@ class MyService : AccessibilityService() {
     fun stop() {
         running = false
         handler?.removeCallbacks(task)
+        mediaProjection?.stop()
+        mediaProjection = null
         showToast("腳本已停止")
         updateService()
     }
 
     private fun afk() {
-        if (mediaProjection == null) {
-            startActivity(Intent(this, MainActivity::class.java))
-            stopService1()
-            showToast("無法取得螢幕權限，請重新開啟服務")
-            return
-        }
+        if (!startProjection()) return
         running = true
         script?.init()
         task.run()
