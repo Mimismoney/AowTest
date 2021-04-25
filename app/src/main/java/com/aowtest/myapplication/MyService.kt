@@ -33,7 +33,7 @@ class MyService : AccessibilityService() {
 
     private var channelId = ""
     private var script: AowScript? = null
-    private lateinit var mediaProjection: MediaProjection
+    private var mediaProjection: MediaProjection? = null
     private var running = false
     private var serviceStarted = false
     var currentActivity: String? = null
@@ -113,7 +113,7 @@ class MyService : AccessibilityService() {
     private fun stopService1() {
         serviceStarted = false
         stop()
-        mediaProjection.stop()
+        mediaProjection?.stop()
         script?.close()
         script = null
         showToast("已關閉服務")
@@ -130,7 +130,7 @@ class MyService : AccessibilityService() {
         val height = metrics.heightPixels
         val data = PointDataParser.deserializeJson(InputStreamReader(assets.open("config.json")).use { it.readText() }, width, height)
         val imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 3)
-        mediaProjection.createVirtualDisplay("ScreenCapture", width, height, metrics.densityDpi, DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, imageReader.surface, null, null)
+        mediaProjection?.createVirtualDisplay("ScreenCapture", width, height, metrics.densityDpi, DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, imageReader.surface, null, null)
         val sp = getSharedPreferences("setting", Context.MODE_PRIVATE) ?: return
         script = AowScript(this, data, imageReader).apply {
             waitAdSeconds = sp.getFloat(getString(R.string.wait_ad_seconds), ResourcesCompat.getFloat(resources, R.dimen.wait_ad_seconds))
@@ -161,6 +161,11 @@ class MyService : AccessibilityService() {
     }
 
     private fun afk() {
+        if (mediaProjection == null) {
+            startActivity(Intent(this, MainActivity::class.java))
+            stopService1()
+            return
+        }
         running = true
         script?.init()
         task.run()

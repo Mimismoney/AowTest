@@ -20,7 +20,8 @@
 # Sets the minimum version of CMake required to build the native library.
 
 cmake_minimum_required(VERSION 3.4.1)
-SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -Os -Wall -s")
+SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -Os -Wall")
+SET(CMAKE_C_FLAGS_RELEASE "$ENV{CFLAGS} -Os -Wall")
 # Adds the CMakeLists.txt file located in the specified directory as a build dependency.
 add_subdirectory(libjpeg)
 add_subdirectory(libpng)
