@@ -69,6 +69,8 @@ class AowScript(private val service: MyService, private val data: PointData, pri
         lastTreasureTime = now.time.time
         noAdSingleCounter = 0
         noAdCounter = 0
+        hasActionCount = 0
+        noActionCount = 0
     }
 
     private fun screenShot() {
