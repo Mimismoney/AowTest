@@ -11,6 +11,7 @@ import android.media.projection.MediaProjection
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.util.Range
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityWindowInfo
 import com.googlecode.tesseract.android.TessBaseAPI
@@ -219,10 +220,10 @@ class AowScript(private val service: MyService, private val data: PointData, pri
             else if (detect(data.logic[15])) ;
             else if (heroDeadQuit && detect(data.logic[16], ClickWay.PRESS_BACK));
             else if (detect(data.logic[21]));
-            else if (detect(data.logic[13], ClickWay.CLICK, true)) ;
-            else if (detect(data.logic[4], ClickWay.PRESS_BACK, true))
+            else if (detect(data.logic[13], ClickWay.CLICK, Range.create(0.0, 0.5))) ;
+            else if (detect(data.logic[4], ClickWay.PRESS_BACK, Range.create(0.0, 0.5)))
                 headHunt = false
-            else if (detect(data.logic[22], ClickWay.NONE, true, outY)) {
+            else if (detect(data.logic[22], ClickWay.NONE, Range(0.0, 0.5), outY)) {
                 image?.also {image ->
                     val rect = Rect(data.logic[22].rect)
                     rect.top = outY[0] + rect.top - data.logic[22].point.y - 3 * image.width / data.width
@@ -319,11 +320,11 @@ class AowScript(private val service: MyService, private val data: PointData, pri
         service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
     }
 
-    private fun detect(logic: DetectionLogic, way: ClickWay = ClickWay.CLICK, isYRange: Boolean = false, outY: IntArray? = null): Boolean {
+    private fun detect(logic: DetectionLogic, way: ClickWay = ClickWay.CLICK, yRange: Range<Double>? = null, outY: IntArray? = null): Boolean {
         val image = this.image?:return false
         if (way != ClickWay.DETECT_RECT) {
             var conditionMetPoint :Point? = null
-            for (i in (if (isYRange) (0 until image.height) else (logic.point.y..logic.point.y))) {
+            for (i in (if (yRange != null) ((yRange.lower * image.height).toInt()..(yRange.upper * image.height).toInt()) else (logic.point.y..logic.point.y))) {
                 val c = image.getPixelColor(logic.point.x, i)
                 val radiusPower =
                         (c.r - logic.color.r) * (c.r - logic.color.r) +
@@ -339,7 +340,7 @@ class AowScript(private val service: MyService, private val data: PointData, pri
             }
             if (conditionMetPoint == null) return false
             if (way == ClickWay.CLICK) {
-                if (!isYRange) {
+                if (yRange == null) {
                     click(logic.rect)
                 }
                 else {
