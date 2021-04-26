@@ -188,7 +188,7 @@ class AowScript(private val service: MyService, private val data: PointData, pri
         val targetWindow = targetRoot?.window?.let {target-> if (target.type == AccessibilityWindowInfo.TYPE_APPLICATION) target else null }
         val currentPackage = service.currentPackage
         val currentActivity = service.currentActivity
-        if (currentPackage == "com.addictive.strategy.army" && windows.all { it.type != AccessibilityWindowInfo.TYPE_SYSTEM } && (currentActivity == "com.addictive.strategy.army.UnityPlayerActivity" || isInGame(targetWindow))) {
+        if (currentPackage == "com.addictive.strategy.army" && (currentActivity == "com.addictive.strategy.army.UnityPlayerActivity" || isInGame(targetWindow)) && windows.all { it.type != AccessibilityWindowInfo.TYPE_SYSTEM }) {
             service.startProjection()
             screenShot()
             exitAdButton = null
