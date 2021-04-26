@@ -7,6 +7,7 @@ import android.graphics.Bitmap
 import android.graphics.Path
 import android.media.Image
 import android.media.ImageReader
+import android.media.projection.MediaProjection
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -184,16 +185,17 @@ class AowScript(private val service: MyService, private val data: PointData, pri
         val windows = service.windows
         val targetRoot = service.rootInActiveWindow
         val targetWindow = targetRoot?.window?.let {target-> if (target.type == AccessibilityWindowInfo.TYPE_APPLICATION) target else null }
-        if (service.currentPackage == "com.addictive.strategy.army" && (service.currentActivity == "com.addictive.strategy.army.UnityPlayerActivity" || isInGame(targetWindow))) {
+        val currentPackage = service.currentPackage
+        val currentActivity = service.currentActivity
+        if (currentPackage == "com.addictive.strategy.army" && windows.all { it.type != AccessibilityWindowInfo.TYPE_SYSTEM } && (currentActivity == "com.addictive.strategy.army.UnityPlayerActivity" || isInGame(targetWindow))) {
+            service.startProjection()
             screenShot()
             exitAdButton = null
             if (BuildConfig.DEBUG)
                 Log.d("DEBUG", "In Game!!")
             inAdCount = 0
             val outY = intArrayOf(0)
-            if (windows.any { it.type == AccessibilityWindowInfo.TYPE_SYSTEM })
-                hasAction = false
-            else if (now - lastTreasureTime > treasurePeriodSeconds * 1000 && detect(data.logic[0]))
+            if (now - lastTreasureTime > treasurePeriodSeconds * 1000 && detect(data.logic[0]))
                 lastTreasureTime = now
             else if (headHunt && detect(data.logic[1])) ;
             else if (headHunt && detect(data.logic[2])) ;
@@ -233,20 +235,19 @@ class AowScript(private val service: MyService, private val data: PointData, pri
             }
             else hasAction = false
         }
-        else if (service.currentPackage == "com.android.vending" && service.currentActivity == "com.google.android.finsky.activities.MarketDeepLinkHandlerActivity") {
-            inAd = true
-            pressBack()
-        }
-        else if (service.currentPackage == "com.addictive.strategy.army" && service.currentActivity == "com.google.android.gms.ads.AdActivity") {
-            inAd = true
-            exitAdButton?.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-        }
-        else if (service.currentPackage == "com.addictive.strategy.army" && service.currentActivity == "com.facebook.ads.AudienceNetworkActivity") {
-            inAd = true
-            exitAdButton?.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-        }
         else {
-            hasAction = false
+            service.stopProjection()
+            if (currentPackage == "com.android.vending" && currentActivity == "com.google.android.finsky.activities.MarketDeepLinkHandlerActivity") {
+                inAd = true
+                pressBack()
+            }
+            else if (currentPackage == "com.addictive.strategy.army" && currentActivity in arrayOf("com.google.android.gms.ads.AdActivity", "com.facebook.ads.AudienceNetworkActivity")) {
+                inAd = true
+                exitAdButton?.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+            }
+            else {
+                hasAction = false
+            }
         }
         when {
             inAd -> {
@@ -374,7 +375,6 @@ class AowScript(private val service: MyService, private val data: PointData, pri
     override fun close() {
         tessBaseAPI.end()
     }
-
 }
 
 private enum class ClickWay {

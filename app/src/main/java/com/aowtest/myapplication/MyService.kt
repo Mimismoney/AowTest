@@ -27,19 +27,24 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.res.ResourcesCompat
 import java.io.InputStreamReader
 import java.util.*
+import kotlin.IllegalStateException
 
 class MyService : AccessibilityService() {
 
     private var channelId = ""
-    private var script: AowScript? = null
     private var mediaProjection: MediaProjection? = null
     private var running = false
-    private var serviceStarted = false
+    private var displayMetrics = DisplayMetrics()
+
     var currentActivity: String? = null
     var currentPackage: String? = null
     var pauseUntil = Calendar.getInstance(TimeZone.getTimeZone("UTC")).time.time
+
     private var handler = Looper.myLooper()?.let { Handler(it) }
     private var task = ScriptRunner()
+    private var imageReader: ImageReader? = null
+    private var script: AowScript? = null
+
     companion object {
         private var mediaProjectionIntent: Intent? = null
     }
@@ -83,7 +88,7 @@ class MyService : AccessibilityService() {
         if (intent != null) {
             when (intent.action) {
                 "START_SERVICE" -> {
-                    intent.getParcelableExtra<Intent>("mediaProjectionIntent")?.also { startService1(it) }
+                    intent.getParcelableExtra<Intent>("mediaProjectionIntent")?.let { startService1(it) }
                 }
                 "AFK" -> {
                     afk()
@@ -103,42 +108,18 @@ class MyService : AccessibilityService() {
         ToastUtil.showToast(applicationContext, charSequence, duration)
     }
 
-    private fun startService1(intent: Intent) {
-        serviceStarted = true
-        mediaProjectionIntent = intent
-        showToast("已開啟服務，點選通知欄「掛機」或按下「\uD83D\uDD08音量-」開始動作", Toast.LENGTH_LONG)
-        updateService()
-    }
-
-    private fun stopService1() {
-        serviceStarted = false
-        stop()
-        mediaProjection?.stop()
-        script?.close()
-        script = null
-        showToast("已關閉服務")
-        stopForeground(true)
-    }
-
     @SuppressLint("WrongConstant")
-    private fun startProjection() : Boolean {
-        val mediaProjectionIntent = mediaProjectionIntent
-        if (mediaProjectionIntent == null) {
-            startActivity(Intent(this, MainActivity::class.java))
-            stopService1()
-            showToast("無法取得螢幕權限，請重新開啟服務")
-            return false
-        }
-        val mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+    private fun startService1(intent: Intent) {
+        mediaProjectionIntent = intent
+
         @Suppress("DEPRECATION") val display = (getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay
-        val metrics = DisplayMetrics().apply { display.getRealMetrics(this) }
-        mediaProjection = mediaProjectionManager.getMediaProjection(Activity.RESULT_OK, mediaProjectionIntent)
-        val width = metrics.widthPixels
-        val height = metrics.heightPixels
+        display.getRealMetrics(displayMetrics)
+        val width = displayMetrics.widthPixels
+        val height = displayMetrics.heightPixels
+        val imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 3).also { imageReader = it }
         val data = PointDataParser.deserializeJson(InputStreamReader(assets.open("config.json")).use { it.readText() }, width, height)
-        val imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 3)
-        mediaProjection?.createVirtualDisplay("ScreenCapture", width, height, metrics.densityDpi, DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, imageReader.surface, null, null)
         val sp = getSharedPreferences("setting", Context.MODE_PRIVATE)
+
         script = AowScript(this, data, imageReader).apply {
             waitAdSeconds = sp.getFloat(getString(R.string.wait_ad_seconds), ResourcesCompat.getFloat(resources, R.dimen.wait_ad_seconds))
             stuckAdSeconds = sp.getFloat(getString(R.string.stuck_ad_seconds), ResourcesCompat.getFloat(resources, R.dimen.stuck_ad_seconds))
@@ -150,13 +131,39 @@ class MyService : AccessibilityService() {
             heroDeadQuit = sp.getBoolean(getString(R.string.hero_dead_quit), resources.getBoolean(R.bool.hero_dead_quit))
             finishQuitGame = sp.getBoolean(getString(R.string.finish_quit_game), resources.getBoolean(R.bool.finish_quit_game))
         }
-        return true
+
+        showToast("已開啟服務，點選通知欄「掛機」或按下「\uD83D\uDD08音量-」開始動作", Toast.LENGTH_LONG)
+        updateService()
+    }
+
+    private fun stopService1() {
+        stop()
+        script?.close()
+        script = null
+        imageReader?.close()
+        imageReader = null
+        showToast("已關閉服務")
+        stopForeground(true)
+    }
+
+    @SuppressLint("WrongConstant")
+    fun startProjection() {
+        if (mediaProjection != null) return
+        val mediaProjectionIntent = mediaProjectionIntent ?: throw IllegalStateException("MediaProjectionIntent should not be null in here")
+        val mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+        mediaProjection = mediaProjectionManager.getMediaProjection(Activity.RESULT_OK, mediaProjectionIntent)
+        mediaProjection?.createVirtualDisplay("ScreenCapture", displayMetrics.widthPixels, displayMetrics.heightPixels, displayMetrics.densityDpi, DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, imageReader?.surface, null, null)
+    }
+
+    fun stopProjection() {
+        mediaProjection?.stop()
+        mediaProjection = null
     }
 
     override fun onKeyEvent(event: KeyEvent?): Boolean {
         if (BuildConfig.DEBUG)
             Log.d("KEY", "${event?.keyCode}")
-        if (serviceStarted && event != null && event.keyCode == KeyEvent.KEYCODE_VOLUME_DOWN && event.action == KeyEvent.ACTION_DOWN)
+        if (imageReader != null && event != null && event.keyCode == KeyEvent.KEYCODE_VOLUME_DOWN && event.action == KeyEvent.ACTION_DOWN)
             if (running) stop() else afk()
         return false
     }
@@ -164,14 +171,18 @@ class MyService : AccessibilityService() {
     fun stop() {
         running = false
         handler?.removeCallbacks(task)
-        mediaProjection?.stop()
-        mediaProjection = null
+        stopProjection()
         showToast("腳本已停止")
         updateService()
     }
 
     private fun afk() {
-        if (!startProjection()) return
+        if (mediaProjectionIntent == null) {
+            startActivity(Intent(this, MainActivity::class.java))
+            stopService1()
+            showToast("無法取得螢幕權限，請重新開啟服務")
+            return
+        }
         running = true
         script?.init()
         task.run()
