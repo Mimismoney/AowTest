@@ -10,6 +10,7 @@ import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.hardware.display.DisplayManager
+import android.hardware.display.VirtualDisplay
 import android.media.ImageReader
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
@@ -44,6 +45,7 @@ class MyService : AccessibilityService() {
     private var task = ScriptRunner()
     private var imageReader: ImageReader? = null
     private var script: AowScript? = null
+    private var virtualDisplay: VirtualDisplay? = null
 
     companion object {
         private var mediaProjectionIntent: Intent? = null
@@ -152,10 +154,12 @@ class MyService : AccessibilityService() {
         val mediaProjectionIntent = mediaProjectionIntent ?: throw IllegalStateException("MediaProjectionIntent should not be null in here")
         val mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         mediaProjection = mediaProjectionManager.getMediaProjection(Activity.RESULT_OK, mediaProjectionIntent)
-        mediaProjection?.createVirtualDisplay("ScreenCapture", displayMetrics.widthPixels, displayMetrics.heightPixels, displayMetrics.densityDpi, DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, imageReader?.surface, null, null)
+        virtualDisplay = mediaProjection?.createVirtualDisplay("ScreenCapture", displayMetrics.widthPixels, displayMetrics.heightPixels, displayMetrics.densityDpi, DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, imageReader?.surface, null, null)
     }
 
     fun stopProjection() {
+        virtualDisplay?.release()
+        virtualDisplay = null
         mediaProjection?.stop()
         mediaProjection = null
     }
