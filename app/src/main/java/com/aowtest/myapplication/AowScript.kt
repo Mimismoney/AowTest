@@ -387,7 +387,7 @@ private enum class ClickWay {
 
 private fun Image.getPixelColor(x: Int, y: Int) : Color {
     while (true) {
-        if (x >= width || y >= height) break
+        if (x < 0 || y < 0 || x >= width || y >= height) break
         val plane = planes[0] ?: break
         val buffer = plane.buffer ?: break
         val offset = y * plane.rowStride + x * plane.pixelStride
@@ -397,7 +397,7 @@ private fun Image.getPixelColor(x: Int, y: Int) : Color {
             buffer[offset + 2].toPositiveInt()
         )
     }
-    throw IllegalAccessException()
+    return Color(0, 0, 0)
 }
 
 fun Byte.toPositiveInt() = toInt() and 0xff
