@@ -223,7 +223,7 @@ class AowScript(private val service: MyService, private val data: PointData, pri
             else if (detect(data.logic[13], ClickWay.CLICK, Range.create(0.0, 0.5))) ;
             else if (detect(data.logic[4], ClickWay.PRESS_BACK, Range.create(0.0, 0.5)))
                 headHunt = false
-            else if (detect(data.logic[22], ClickWay.NONE, Range(0.0, 0.5), outY)) {
+            else if (detect(data.logic[22], ClickWay.NONE, Range(0.0, 0.2), outY)) {
                 image?.also {image ->
                     val rect = Rect(data.logic[22].rect)
                     rect.top = outY[0] + rect.top - data.logic[22].point.y - 3 * image.width / data.width

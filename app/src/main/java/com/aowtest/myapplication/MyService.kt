@@ -116,8 +116,10 @@ class MyService : AccessibilityService() {
 
         @Suppress("DEPRECATION") val display = (getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay
         display.getRealMetrics(displayMetrics)
-        val width = displayMetrics.widthPixels
-        val height = displayMetrics.heightPixels
+        val width = displayMetrics.widthPixels.coerceAtMost(displayMetrics.heightPixels)
+        val height = displayMetrics.heightPixels.coerceAtLeast(displayMetrics.widthPixels)
+        displayMetrics.widthPixels = width
+        displayMetrics.heightPixels = height
         val imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 3).also { imageReader = it }
         val data = PointDataParser.deserializeJson(InputStreamReader(assets.open("config.json")).use { it.readText() }, width, height)
         val sp = getSharedPreferences("setting", Context.MODE_PRIVATE)
