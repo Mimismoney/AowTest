@@ -1,6 +1,7 @@
 package com.aowtest.myapplication
 
 import android.accessibilityservice.AccessibilityService
+import android.accessibilityservice.AccessibilityServiceInfo
 import android.annotation.SuppressLint
 import android.app.*
 import android.content.ComponentName
@@ -17,6 +18,7 @@ import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.provider.Settings
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.KeyEvent
@@ -27,8 +29,6 @@ import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.content.res.ResourcesCompat
 import java.io.InputStreamReader
-import java.util.*
-import kotlin.IllegalStateException
 
 class MyService : AccessibilityService() {
 
@@ -129,6 +129,22 @@ class MyService : AccessibilityService() {
                 height
             )
             script = AowScript(this, data, imageReader)
+            serviceInfo = serviceInfo.apply {
+                this.eventTypes = AccessibilityEvent.TYPES_ALL_MASK
+                this.flags = AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS or AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS
+            }
+            val capabilities = serviceInfo.capabilities
+            if ((capabilities and AccessibilityServiceInfo.CAPABILITY_CAN_PERFORM_GESTURES) == 0 ||
+                (capabilities and AccessibilityServiceInfo.CAPABILITY_CAN_RETRIEVE_WINDOW_CONTENT) == 0 ||
+                (capabilities and AccessibilityServiceInfo.CAPABILITY_CAN_REQUEST_FILTER_KEY_EVENTS) == 0) {
+                disableSelf()
+                stopService1()
+                ToastUtil.showToast(this, "請重新開啟無障礙設定", Toast.LENGTH_SHORT)
+                startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                })
+                return
+            }
         }
         val sp = getSharedPreferences("setting", Context.MODE_PRIVATE)
         script?.apply {
