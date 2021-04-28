@@ -35,6 +35,7 @@ class MainActivity : Activity() {
     private lateinit var detectPeriodSecondsText: EditText
     private lateinit var heroDeadQuitCheck: CheckBox
     private lateinit var finishQuitGameCheck: CheckBox
+    private lateinit var windowPauseScriptCheck: CheckBox
     private lateinit var crashTestButton: Button
 
     companion object {
@@ -54,6 +55,7 @@ class MainActivity : Activity() {
         detectPeriodSecondsText = findViewById(R.id.detect_period_seconds)
         heroDeadQuitCheck = findViewById(R.id.hero_dead_quit)
         finishQuitGameCheck = findViewById(R.id.finish_quit_game)
+        windowPauseScriptCheck = findViewById(R.id.window_pause_script)
         crashTestButton = findViewById(R.id.crash_test)
         val data = getSharedPreferences("setting", Context.MODE_PRIVATE)
         waitAdSecondsText.text = data.getFloat(getString(R.string.wait_ad_seconds), ResourcesCompat.getFloat(resources, R.dimen.wait_ad_seconds)).toString().toEditable()
@@ -65,6 +67,7 @@ class MainActivity : Activity() {
         detectPeriodSecondsText.text = data.getFloat(getString(R.string.detect_period_seconds), ResourcesCompat.getFloat(resources, R.dimen.detect_period_seconds)).toString().toEditable()
         heroDeadQuitCheck.isChecked = data.getBoolean(getString(R.string.hero_dead_quit), resources.getBoolean(R.bool.hero_dead_quit))
         finishQuitGameCheck.isChecked = data.getBoolean(getString(R.string.finish_quit_game), resources.getBoolean(R.bool.finish_quit_game))
+        windowPauseScriptCheck.isChecked = data.getBoolean(getString(R.string.window_pause_script), resources.getBoolean(R.bool.window_pause_script))
         if (!BuildConfig.DEBUG) {
             crashTestButton.visibility = View.GONE
         }
@@ -149,7 +152,7 @@ class MainActivity : Activity() {
                 .putBoolean(
                     getString(R.string.finish_quit_game),
                     finishQuitGameCheck.isChecked
-                )
+                ).putBoolean(getString(R.string.window_pause_script), windowPauseScriptCheck.isChecked)
                 .apply()
         } catch (ex: NumberFormatException) {
             ToastUtil.showToast(this, "數值輸入錯誤", Toast.LENGTH_SHORT)

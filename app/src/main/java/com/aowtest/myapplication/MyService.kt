@@ -39,7 +39,6 @@ class MyService : AccessibilityService() {
 
     var currentActivity: String? = null
     var currentPackage: String? = null
-    var pauseUntil = Calendar.getInstance(TimeZone.getTimeZone("UTC")).time.time
 
     private var handler = Looper.myLooper()?.let { Handler(it) }
     private var task = ScriptRunner()
@@ -112,19 +111,27 @@ class MyService : AccessibilityService() {
 
     @SuppressLint("WrongConstant")
     private fun startService1(intent: Intent) {
-        mediaProjectionIntent = intent
+        if(script == null) {
+            mediaProjectionIntent = intent
 
-        @Suppress("DEPRECATION") val display = (getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay
-        display.getRealMetrics(displayMetrics)
-        val width = displayMetrics.widthPixels.coerceAtMost(displayMetrics.heightPixels)
-        val height = displayMetrics.heightPixels.coerceAtLeast(displayMetrics.widthPixels)
-        displayMetrics.widthPixels = width
-        displayMetrics.heightPixels = height
-        val imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 3).also { imageReader = it }
-        val data = PointDataParser.deserializeJson(InputStreamReader(assets.open("config.json")).use { it.readText() }, width, height)
+            @Suppress("DEPRECATION") val display =
+                (getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay
+            display.getRealMetrics(displayMetrics)
+            val width = displayMetrics.widthPixels.coerceAtMost(displayMetrics.heightPixels)
+            val height = displayMetrics.heightPixels.coerceAtLeast(displayMetrics.widthPixels)
+            displayMetrics.widthPixels = width
+            displayMetrics.heightPixels = height
+            val imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 3)
+                .also { imageReader = it }
+            val data = PointDataParser.deserializeJson(
+                InputStreamReader(assets.open("config.json")).use { it.readText() },
+                width,
+                height
+            )
+            script = AowScript(this, data, imageReader)
+        }
         val sp = getSharedPreferences("setting", Context.MODE_PRIVATE)
-
-        script = AowScript(this, data, imageReader).apply {
+        script?.apply {
             waitAdSeconds = sp.getFloat(getString(R.string.wait_ad_seconds), ResourcesCompat.getFloat(resources, R.dimen.wait_ad_seconds))
             stuckAdSeconds = sp.getFloat(getString(R.string.stuck_ad_seconds), ResourcesCompat.getFloat(resources, R.dimen.stuck_ad_seconds))
             noAdTimes = sp.getInt(getString(R.string.no_ad_times), resources.getInteger(R.integer.no_ad_times))
@@ -134,7 +141,9 @@ class MyService : AccessibilityService() {
             detectPeriodSeconds = sp.getFloat(getString(R.string.detect_period_seconds), ResourcesCompat.getFloat(resources, R.dimen.detect_period_seconds))
             heroDeadQuit = sp.getBoolean(getString(R.string.hero_dead_quit), resources.getBoolean(R.bool.hero_dead_quit))
             finishQuitGame = sp.getBoolean(getString(R.string.finish_quit_game), resources.getBoolean(R.bool.finish_quit_game))
+            windowPauseScript = sp.getBoolean(getString(R.string.window_pause_script), resources.getBoolean(R.bool.window_pause_script))
         }
+        running = false
 
         showToast("已開啟服務，點選通知欄「掛機」或按下「\uD83D\uDD08音量-」開始動作", Toast.LENGTH_LONG)
         updateService()

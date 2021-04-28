@@ -9,4 +9,5 @@
     <dimen name="detect_period_seconds">1</dimen>
     <bool name="hero_dead_quit">true</bool>
     <bool name="finish_quit_game">false</bool>
+    <bool name="window_pause_script">true</bool>
 </resources>

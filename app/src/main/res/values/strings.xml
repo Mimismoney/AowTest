@@ -10,5 +10,15 @@
     <string name="detect_period_seconds">DetectPeriodSeconds</string>
     <string name="hero_dead_quit">HeroDeadQuit</string>
     <string name="finish_quit_game">FinishQuitScript</string>
+    <string name="window_pause_script">WindowPauseScript</string>
     <string name="accessibility_service_description">使用自動點擊</string>
+    <string name="button_turn_on_service">開啟服務</string>
+    <string name="button_test_crash">測試Crash</string>
+    <string name="check_window_pause_script">有視窗遮擋時暫停腳本(若腳本無法運作，可以試著取消勾選)</string>
+    <string name="check_finish_quit_game">刷金完成後退出遊戲</string>
+    <string name="seconds">秒</string>
+    <string name="check_hero_dead_quit">英雄死亡退出</string>
+    <string name="double_detect_period_seconds">偵測間格</string>
+    <string name="units">單位</string>
+    <string name="int_min_self_soldiers">最小己方兵數</string>
 </resources>

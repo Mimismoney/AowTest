@@ -30,7 +30,7 @@ def getVersionName = { ->
         commandLine 'git', 'describe', '--always', '--tags', '--dirty'
         standardOutput = code
     }
-    def v = "1.2.4-${code.toString().split("\n")[0].trim()}"
+    def v = "1.2.5-${code.toString().split("\n")[0].trim()}"
     return  v
 }
 

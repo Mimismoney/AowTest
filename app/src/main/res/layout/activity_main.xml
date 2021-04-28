@@ -1,62 +1,61 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<ScrollView  xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    tools:context=".MainActivity">
-    <ScrollView
+    tools:context=".MainActivity" >
+    <TableLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content" >
-        <TableLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-            <TableRow>
-                <TextView android:text="等待進廣告時間" android:layout_weight="1" />
-                <EditText android:id="@+id/wait_ad_seconds" android:layout_weight="2" android:inputType="numberDecimal" />
-                <TextView android:text="秒" android:layout_weight="2" />
-            </TableRow>
-            <TableRow>
-                <TextView android:text="卡進廣告畫面重啟時間" android:layout_weight="1" />
-                <EditText android:id="@+id/stuck_ad_seconds" android:layout_weight="2" android:inputType="numberDecimal" />
-                <TextView android:text="秒" android:layout_weight="2" />
-            </TableRow>
-            <TableRow>
-                <TextView android:text="無廣告重啟次數" android:layout_weight="1" />
-                <EditText android:id="@+id/no_ad_times" android:layout_weight="2" android:inputType="number" />
-                <TextView android:text="次" android:layout_weight="2" />
-            </TableRow>
-            <TableRow>
-                <TextView android:text="卡遊戲畫面重啟時間" android:layout_weight="1" />
-                <EditText android:id="@+id/game_stuck_seconds" android:layout_weight="2" android:inputType="numberDecimal" />
-                <TextView android:text="秒" android:layout_weight="2" />
-            </TableRow>
-            <TableRow>
-                <TextView android:text="領掛機寶箱間格時間" android:layout_weight="1" />
-                <EditText android:id="@+id/treasure_period_seconds" android:layout_weight="2" android:inputType="numberDecimal" />
-                <TextView android:text="秒" android:layout_weight="2" />
-            </TableRow>
-            <TableRow>
-                <TextView android:text="最小己方兵數" android:layout_weight="1" />
-                <EditText android:id="@+id/min_self_soldiers" android:layout_weight="2" android:inputType="number" />
-                <TextView android:text="人" android:layout_weight="2" />
-            </TableRow>
-            <TableRow>
-                <TextView android:text="偵測間格" android:layout_weight="1" />
-                <EditText android:id="@+id/detect_period_seconds" android:layout_weight="2" android:inputType="numberDecimal" />
-                <TextView android:text="秒" android:layout_weight="2" />
-            </TableRow>
-            <TableRow>
-                <CheckBox android:text="英雄死亡退出" android:id="@+id/hero_dead_quit" android:layout_weight="1" />
-            </TableRow>
-            <TableRow>
-                <CheckBox android:text="刷金完成後退出遊戲" android:id="@+id/finish_quit_game" android:layout_weight="1" />
-            </TableRow>
-            <TableRow>
-                <Button android:text="開啟服務" android:onClick="onStartServiceClick" android:layout_weight="1" />
-                <Button android:text="測試Crash" android:onClick="onCrashClick" android:layout_weight="1" android:id="@+id/crash_test"/>
-            </TableRow>
-        </TableLayout>
-    </ScrollView>
-</LinearLayout>
+        android:layout_height="wrap_content">
+        <TableRow>
+            <TextView android:text="等待進廣告時間" android:layout_weight="1" />
+            <EditText android:id="@+id/wait_ad_seconds" android:layout_weight="2" android:inputType="numberDecimal" />
+            <TextView android:text="秒" android:layout_weight="2" />
+        </TableRow>
+        <TableRow>
+            <TextView android:text="卡進廣告畫面重啟時間" android:layout_weight="1" />
+            <EditText android:id="@+id/stuck_ad_seconds" android:layout_weight="2" android:inputType="numberDecimal" />
+            <TextView android:text="秒" android:layout_weight="2" />
+        </TableRow>
+        <TableRow>
+            <TextView android:text="無廣告重啟次數" android:layout_weight="1" />
+            <EditText android:id="@+id/no_ad_times" android:layout_weight="2" android:inputType="number" />
+            <TextView android:text="次" android:layout_weight="2" />
+        </TableRow>
+        <TableRow>
+            <TextView android:text="卡遊戲畫面重啟時間" android:layout_weight="1" />
+            <EditText android:id="@+id/game_stuck_seconds" android:layout_weight="2" android:inputType="numberDecimal" />
+            <TextView android:text="秒" android:layout_weight="2" />
+        </TableRow>
+        <TableRow>
+            <TextView android:text="領掛機寶箱間格時間" android:layout_weight="1" />
+            <EditText android:id="@+id/treasure_period_seconds" android:layout_weight="2" android:inputType="numberDecimal" />
+            <TextView android:text="秒" android:layout_weight="2" />
+        </TableRow>
+        <TableRow>
+            <TextView android:text="@string/int_min_self_soldiers" android:layout_weight="1" android:labelFor="@id/min_self_soldiers" />
+            <EditText android:id="@+id/min_self_soldiers" android:layout_weight="2" android:inputType="number" android:autofillHints="number" />
+            <TextView android:text="@string/units" android:layout_weight="2" android:labelFor="@id/min_self_soldiers" />
+        </TableRow>
+        <TableRow>
+            <TextView android:text="@string/double_detect_period_seconds" android:layout_weight="1" android:labelFor="@id/detect_period_seconds" />
+            <EditText android:id="@+id/detect_period_seconds" android:layout_weight="2" android:inputType="numberDecimal"
+                android:autofillHints="number" />
+            <TextView android:text="@string/seconds" android:layout_weight="2" android:labelFor="@id/detect_period_seconds" />
+        </TableRow>
+        <TableRow>
+            <CheckBox android:text="@string/check_hero_dead_quit" android:id="@+id/hero_dead_quit" android:layout_span="3" />
+        </TableRow>
+        <TableRow>
+            <CheckBox android:text="@string/check_finish_quit_game" android:id="@+id/finish_quit_game" android:layout_span="3" />
+        </TableRow>
+        <TableRow>
+            <CheckBox android:text="@string/check_window_pause_script" android:id="@+id/window_pause_script" android:layout_span="3" />
+        </TableRow>
+        <TableRow style="?android:attr/buttonBarStyle">
+            <Button android:text="@string/button_turn_on_service" android:onClick="onStartServiceClick" android:layout_weight="1" style="?android:attr/buttonBarButtonStyle" />
+            <Button android:text="@string/button_test_crash" android:onClick="onCrashClick" android:layout_weight="1" android:id="@+id/crash_test"  style="?android:attr/buttonBarButtonStyle"/>
+        </TableRow>
+    </TableLayout>
+</ScrollView>

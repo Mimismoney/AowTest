@@ -7,18 +7,19 @@ import android.graphics.Bitmap
 import android.graphics.Path
 import android.media.Image
 import android.media.ImageReader
-import android.media.projection.MediaProjection
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.util.Range
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityWindowInfo
+import android.widget.Toast
 import com.googlecode.tesseract.android.TessBaseAPI
 import java.io.Closeable
 import java.io.File
 import java.util.*
 import kotlin.random.Random
+import kotlin.random.nextInt
 
 class AowScript(private val service: MyService, private val data: PointData, private val imageReader: ImageReader) : Closeable {
 
@@ -39,6 +40,7 @@ class AowScript(private val service: MyService, private val data: PointData, pri
             } else field
     var heroDeadQuit: Boolean = true
     var finishQuitGame: Boolean = false
+    var windowPauseScript: Boolean = true
 
     // 腳本變數
     private var date = 0
@@ -171,10 +173,6 @@ class AowScript(private val service: MyService, private val data: PointData, pri
         val calendar = Calendar.getInstance(utcTimeZone)
         val date = calendar.get(Calendar.DAY_OF_MONTH)
         val now = calendar.time.time
-        if (now < service.pauseUntil) {
-            Log.d("PAUSE", "$now < ${service.pauseUntil}")
-            return
-        }
         if (date != this.date) {
             this.date = date
             hasCoin = true
@@ -183,12 +181,11 @@ class AowScript(private val service: MyService, private val data: PointData, pri
         var hasAction = true
         var inAd = false
 
-        val windows = service.windows
         val targetRoot = service.rootInActiveWindow
         val targetWindow = targetRoot?.window?.let {target-> if (target.type == AccessibilityWindowInfo.TYPE_APPLICATION) target else null }
         val currentPackage = service.currentPackage
         val currentActivity = service.currentActivity
-        if (currentPackage == "com.addictive.strategy.army" && (currentActivity == "com.addictive.strategy.army.UnityPlayerActivity" || isInGame(targetWindow)) && windows.all { it.type != AccessibilityWindowInfo.TYPE_SYSTEM }) {
+        if (currentPackage == "com.addictive.strategy.army" && (currentActivity == "com.addictive.strategy.army.UnityPlayerActivity" || isInGame(targetWindow)) && (!windowPauseScript || service.windows.all { it.type != AccessibilityWindowInfo.TYPE_SYSTEM })) {
             service.startProjection()
             screenShot()
             exitAdButton = null
@@ -267,15 +264,21 @@ class AowScript(private val service: MyService, private val data: PointData, pri
                 inAdCount = 0
             }
         }
-        if (hasCoin && noActionCount * detectPeriodSeconds > gameStuckSeconds || hasActionCount * detectPeriodSeconds > gameStuckSeconds || noAdCounter > noAdTimes) {
-            restart()
+        if (hasCoin && noActionCount * detectPeriodSeconds > gameStuckSeconds)  {
+            restart("超過${noActionCount * detectPeriodSeconds}秒無行動")
+        }
+        else if (hasActionCount * detectPeriodSeconds > gameStuckSeconds) {
+            restart("持續行動超過${hasActionCount * detectPeriodSeconds}秒")
+        }
+        else if (noAdCounter > noAdTimes) {
+            restart("超過${noAdTimes}次無廣告")
         }
         else if (!BuildConfig.DEBUG) {
             (inAdCount * detectPeriodSeconds).also {
                 if (it > 32) {
                     pressBack()
                     if (it > gameStuckSeconds) {
-                        restart()
+                        restart("廣告超時")
                     }
                 }
             }
@@ -292,7 +295,8 @@ class AowScript(private val service: MyService, private val data: PointData, pri
         }
     }
 
-    private fun restart() {
+    private fun restart(reason: String) {
+        ToastUtil.showToast(service, reason, Toast.LENGTH_LONG)
         service.startActivity(Intent(service, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
             action = "RESTART"
@@ -313,8 +317,8 @@ class AowScript(private val service: MyService, private val data: PointData, pri
     }
 
     private fun click(rect: Rect) {
-        click(Random.nextInt(rect.left, rect.left + rect.width + 1),
-            Random.nextInt(rect.top, rect.top + rect.height + 1))
+        click(Random.nextInt(rect.left .. (rect.left + rect.width)),
+            Random.nextInt(rect.top .. (rect.top + rect.height)))
     }
     private fun pressBack() {
         service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
@@ -386,18 +390,16 @@ private enum class ClickWay {
 }
 
 private fun Image.getPixelColor(x: Int, y: Int) : Color {
-    while (true) {
-        if (x < 0 || y < 0 || x >= width || y >= height) break
-        val plane = planes[0] ?: break
-        val buffer = plane.buffer ?: break
-        val offset = y * plane.rowStride + x * plane.pixelStride
-        return Color(
-            buffer[offset].toPositiveInt(),
-            buffer[offset + 1].toPositiveInt(),
-            buffer[offset + 2].toPositiveInt()
-        )
-    }
-    return Color(0, 0, 0)
+    if (!(0 until width).contains(x)) throw IllegalArgumentException("x = $x not in (0, ${width})")
+    if (!(0 until height).contains(y)) throw IllegalArgumentException("y = $y not in (0, ${height})")
+    val plane = planes[0] ?: throw IllegalStateException("plane = null")
+    val buffer = plane.buffer ?: throw IllegalStateException("buffer = null")
+    val offset = y * plane.rowStride + x * plane.pixelStride
+    return Color(
+        buffer[offset].toPositiveInt(),
+        buffer[offset + 1].toPositiveInt(),
+        buffer[offset + 2].toPositiveInt()
+    )
 }
 
 fun Byte.toPositiveInt() = toInt() and 0xff
