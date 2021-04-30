@@ -3,6 +3,7 @@ package com.aowtest.myapplication
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.app.Activity
 import android.app.ActivityManager
+import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -97,10 +98,14 @@ class MainActivity : Activity() {
                     Handler(it).postDelayed({
                         (getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager).killBackgroundProcesses("com.addictive.strategy.army")
                         Handler(it).postDelayed({
-                            applicationContext.startActivity(Intent().apply {
-                                component = ComponentName("com.addictive.strategy.army", "com.addictive.strategy.army.UnityPlayerActivity")
-                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                            })
+                            try {
+                                applicationContext.startActivity(Intent().apply {
+                                    component = ComponentName("com.addictive.strategy.army", "com.addictive.strategy.army.UnityPlayerActivity")
+                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                })
+                            } catch (ex: ActivityNotFoundException) {
+                                ToastUtil.showToast(this, "無法找到遊戲檔案", Toast.LENGTH_SHORT)
+                            }
                         }, 1000)
                     }, 1000)
                 }

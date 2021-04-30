@@ -148,7 +148,8 @@ class AowScript(private val service: MyService, private val data: PointData, pri
         return inGame
     }
 
-    private fun detectInt(image: Image, rect: Rect): Int? {
+    private fun detectInt(rect: Rect): Int? {
+        val image = image ?: return null
         val width = rect.width
         val height = rect.height
         val x = rect.left
@@ -217,14 +218,16 @@ class AowScript(private val service: MyService, private val data: PointData, pri
             else if (detect(data.logic[15])) ;
             else if (heroDeadQuit && detect(data.logic[16], ClickWay.PRESS_BACK));
             else if (detect(data.logic[21]));
-            else if (detect(data.logic[13], ClickWay.CLICK, Range.create(0.0, 0.5))) ;
+            else if (detect(data.logic[13], ClickWay.CLICK, Range.create(0.0, 0.8))) ;
             else if (detect(data.logic[4], ClickWay.PRESS_BACK, Range.create(0.0, 0.5)))
                 headHunt = false
+            else if (detect(data.logic[17], ClickWay.NONE) && detectInt(data.logic[17].rect) == 1)
+                click(data.logic[17].point)
             else if (detect(data.logic[22], ClickWay.NONE, Range(0.0, 0.2), outY)) {
-                image?.also {image ->
+                image?.also { image ->
                     val rect = Rect(data.logic[22].rect)
                     rect.top = outY[0] + rect.top - data.logic[22].point.y - 3 * image.width / data.width
-                    detectInt(image, rect).also {number->
+                    detectInt(rect).also {number->
                         if (number != null && number < minSelfSoldiers) {
                             pressBack()
                         }
@@ -318,7 +321,11 @@ class AowScript(private val service: MyService, private val data: PointData, pri
 
     private fun click(rect: Rect) {
         click(Random.nextInt(rect.left .. (rect.left + rect.width)),
-            Random.nextInt(rect.top .. (rect.top + rect.height)))
+                Random.nextInt(rect.top .. (rect.top + rect.height)))
+    }
+
+    private fun click(point: Point) {
+        click(point.x, point.y)
     }
     private fun pressBack() {
         service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
