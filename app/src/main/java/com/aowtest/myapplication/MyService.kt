@@ -209,7 +209,9 @@ class MyService : AccessibilityService() {
 
     private fun afk() {
         if (mediaProjectionIntent == null) {
-            startActivity(Intent(this, MainActivity::class.java))
+            startActivity(Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            })
             stopService1()
             showToast("無法取得螢幕權限，請重新開啟服務")
             return
@@ -228,21 +230,21 @@ class MyService : AccessibilityService() {
             }
             it.setContentTitle("腳本執行服務")
             it.setContentText("點選「掛機」或按下「\uD83D\uDD08音量-」開始動作")
-            it.setSmallIcon(R.drawable.notification_icon_background)
+            it.setSmallIcon(R.drawable.ic_notification)
             it.priority = NotificationCompat.PRIORITY_DEFAULT
             if (!running) {
                 val afkStartIntent = Intent(this, MyService::class.java).apply {
                     action = "AFK"
                 }
-                it.addAction(R.drawable.notification_icon_background, "掛機", PendingIntent.getService(this, 0, afkStartIntent, PendingIntent.FLAG_UPDATE_CURRENT))
+                it.addAction(R.drawable.ic_notification, "掛機", PendingIntent.getService(this, 0, afkStartIntent, PendingIntent.FLAG_UPDATE_CURRENT))
             }
             else {
                 val stopIntent = Intent(this, MyService::class.java).apply {
                     action = "STOP"
                 }
-                it.addAction(R.drawable.notification_icon_background, "停止", PendingIntent.getService(this, 0, stopIntent, PendingIntent.FLAG_UPDATE_CURRENT))
+                it.addAction(R.drawable.ic_notification, "停止", PendingIntent.getService(this, 0, stopIntent, PendingIntent.FLAG_UPDATE_CURRENT))
             }
-            it.addAction(R.drawable.notification_icon_background, "關閉", PendingIntent.getService(this, 0, closeServiceIntent, PendingIntent.FLAG_UPDATE_CURRENT))
+            it.addAction(R.drawable.ic_notification, "關閉", PendingIntent.getService(this, 0, closeServiceIntent, PendingIntent.FLAG_UPDATE_CURRENT))
         }.build().also {
             startForeground(1, it)
         }

@@ -276,7 +276,7 @@ class AowScript(private val service: MyService, private val data: PointData, pri
         else if (noAdCounter > noAdTimes) {
             restart("超過${noAdTimes}次無廣告")
         }
-        else if (!BuildConfig.DEBUG) {
+        else {
             (inAdCount * detectPeriodSeconds).also {
                 if (it > 32) {
                     pressBack()
