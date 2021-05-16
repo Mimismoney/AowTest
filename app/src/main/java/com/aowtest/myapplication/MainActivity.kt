@@ -101,7 +101,7 @@ class MainActivity : Activity() {
                             try {
                                 applicationContext.startActivity(Intent().apply {
                                     component = ComponentName("com.addictive.strategy.army", "com.addictive.strategy.army.UnityPlayerActivity")
-                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                                 })
                             } catch (ex: ActivityNotFoundException) {
                                 ToastUtil.showToast(this, "無法找到遊戲檔案", Toast.LENGTH_SHORT)

@@ -80,6 +80,7 @@ class MyService : AccessibilityService() {
                     } catch (ex: PackageManager.NameNotFoundException) {
                     }
                 }
+                else -> {}
             }
         }
     }
@@ -129,11 +130,11 @@ class MyService : AccessibilityService() {
                 height
             )
             script = AowScript(this, data, imageReader)
-            serviceInfo = serviceInfo.apply {
+            serviceInfo?.apply {
                 this.eventTypes = AccessibilityEvent.TYPES_ALL_MASK
                 this.flags = AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS or AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS
             }
-            val capabilities = serviceInfo.capabilities
+            val capabilities = serviceInfo?.capabilities ?: 0
             if ((capabilities and AccessibilityServiceInfo.CAPABILITY_CAN_PERFORM_GESTURES) == 0 ||
                 (capabilities and AccessibilityServiceInfo.CAPABILITY_CAN_RETRIEVE_WINDOW_CONTENT) == 0 ||
                 (capabilities and AccessibilityServiceInfo.CAPABILITY_CAN_REQUEST_FILTER_KEY_EVENTS) == 0) {

@@ -18,6 +18,7 @@ import com.googlecode.tesseract.android.TessBaseAPI
 import java.io.Closeable
 import java.io.File
 import java.util.*
+import kotlin.math.log
 import kotlin.random.Random
 import kotlin.random.nextInt
 
@@ -218,12 +219,15 @@ class AowScript(private val service: MyService, private val data: PointData, pri
             else if (detect(data.logic[15])) ;
             else if (heroDeadQuit && detect(data.logic[16], ClickWay.PRESS_BACK));
             else if (detect(data.logic[21]));
-            else if (detect(data.logic[13], ClickWay.CLICK, Range.create(0.0, 0.8))) ;
-            else if (detect(data.logic[4], ClickWay.PRESS_BACK, Range.create(0.0, 0.5)))
+            // else if (detect(data.logic[13], ClickWay.CLICK, Range.create(0.0, 0.8))) ;
+            else if (detect(data.logic[18], ClickWay.CLICK, Range.create(0.0, 1.0)))
+            else if (detect(data.logic[19], ClickWay.CLICK, Range.create(0.2, 1.0)))
+            else if (detect(data.logic[4], ClickWay.PRESS_BACK, Range.create(0.2, 1.0)))
+            else if (detect(data.logic[20], ClickWay.SWIPE_UP, Range.create(0.0, 1.0)))
                 headHunt = false
             else if (detect(data.logic[17], ClickWay.NONE) && detectInt(data.logic[17].rect) == 1)
                 click(data.logic[17].point)
-            else if (detect(data.logic[22], ClickWay.NONE, Range(0.0, 0.2), outY)) {
+            else if (detect(data.logic[22], ClickWay.NONE, Range.create(0.0, 0.2), outY)) {
                 image?.also { image ->
                     val rect = Rect(data.logic[22].rect)
                     rect.top = outY[0] + rect.top - data.logic[22].point.y - 3 * image.width / data.width
@@ -331,11 +335,21 @@ class AowScript(private val service: MyService, private val data: PointData, pri
         service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
     }
 
+    private fun swipeUp() {
+        val image = image ?: return
+        val stroke = GestureDescription.StrokeDescription(Path().apply {
+            moveTo((image.width * .5).toFloat(), (image.height * .75).toFloat())
+            lineTo((image.width*.5).toFloat(), (image.height*.25).toFloat())
+        }, 0, 10)
+        val gesture = GestureDescription.Builder().addStroke(stroke).build() ?: return
+        service.dispatchGesture(gesture, null, null)
+    }
+
     private fun detect(logic: DetectionLogic, way: ClickWay = ClickWay.CLICK, yRange: Range<Double>? = null, outY: IntArray? = null): Boolean {
         val image = this.image?:return false
         if (way != ClickWay.DETECT_RECT) {
             var conditionMetPoint :Point? = null
-            for (i in (if (yRange != null) ((yRange.lower * image.height).toInt()..(yRange.upper * image.height).toInt()) else (logic.point.y..logic.point.y))) {
+            for (i in (if (yRange != null) ((yRange.lower * image.height).toInt() until (yRange.upper * image.height).toInt()) else (logic.point.y..logic.point.y))) {
                 val c = image.getPixelColor(logic.point.x, i)
                 val radiusPower =
                         (c.r - logic.color.r) * (c.r - logic.color.r) +
@@ -355,11 +369,14 @@ class AowScript(private val service: MyService, private val data: PointData, pri
                     click(logic.rect)
                 }
                 else {
-                    click(conditionMetPoint.x, conditionMetPoint.y)
+                    click(Rect(logic.rect.left + (conditionMetPoint.x - logic.point.x), logic.rect.top + (conditionMetPoint.y - logic.point.y), logic.rect.width, logic.rect.height))
                 }
             }
             else if (way == ClickWay.PRESS_BACK) {
                 pressBack()
+            }
+            else if (way == ClickWay.SWIPE_UP) {
+                swipeUp()
             }
         }
         else {
@@ -393,7 +410,8 @@ private enum class ClickWay {
     CLICK,
     PRESS_BACK,
     NONE,
-    DETECT_RECT
+    DETECT_RECT,
+    SWIPE_UP
 }
 
 private fun Image.getPixelColor(x: Int, y: Int) : Color {
