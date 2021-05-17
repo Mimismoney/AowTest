@@ -18,7 +18,8 @@ import com.googlecode.tesseract.android.TessBaseAPI
 import java.io.Closeable
 import java.io.File
 import java.util.*
-import kotlin.math.log
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 import kotlin.random.Random
 import kotlin.random.nextInt
 
@@ -64,6 +65,10 @@ class AowScript(private val service: MyService, private val data: PointData, pri
         pageSegMode = TessBaseAPI.PageSegMode.PSM_SINGLE_WORD
         init(service.cacheDir.absolutePath + File.separator, "digits", TessBaseAPI.OEM_DEFAULT)
     }
+
+    private val lock = ReentrantLock()
+    private var hasGestureRunning = false
+    private val gestureQueue = LinkedList<GestureDescription>()
 
     fun init() {
         val now =  Calendar.getInstance(utcTimeZone)
@@ -223,8 +228,9 @@ class AowScript(private val service: MyService, private val data: PointData, pri
             else if (detect(data.logic[18], ClickWay.CLICK, Range.create(0.0, 1.0)))
             else if (detect(data.logic[19], ClickWay.CLICK, Range.create(0.2, 1.0)))
             else if (detect(data.logic[4], ClickWay.PRESS_BACK, Range.create(0.2, 1.0)))
-            else if (detect(data.logic[20], ClickWay.SWIPE_UP, Range.create(0.0, 1.0)))
                 headHunt = false
+            else if (detect(data.logic[13], ClickWay.SWIPE_UP, Range.create(0.0, 1.0)))
+            else if (detect(data.logic[20], ClickWay.SWIPE_UP, Range.create(0.0, 1.0)))
             else if (detect(data.logic[17], ClickWay.NONE) && detectInt(data.logic[17].rect) == 1)
                 click(data.logic[17].point)
             else if (detect(data.logic[22], ClickWay.NONE, Range.create(0.0, 0.2), outY)) {
@@ -318,9 +324,12 @@ class AowScript(private val service: MyService, private val data: PointData, pri
     private fun click(x: Int, y: Int) {
         if (BuildConfig.DEBUG)
             Log.d("ACTION", "Click ($x, $y)")
-        val stroke = GestureDescription.StrokeDescription(Path().apply { moveTo(x.toFloat(), y.toFloat()) }, 0, 1)
+        val stroke = GestureDescription.StrokeDescription(Path().apply {
+            moveTo(x.toFloat(), y.toFloat())
+            lineTo(x.toFloat(), y.toFloat())
+       }, 0, 500)
         val gesture = GestureDescription.Builder().addStroke(stroke).build()?:return
-        service.dispatchGesture(gesture, null, null)
+        dispatchGesture(gesture)
     }
 
     private fun click(rect: Rect) {
@@ -331,18 +340,57 @@ class AowScript(private val service: MyService, private val data: PointData, pri
     private fun click(point: Point) {
         click(point.x, point.y)
     }
+
     private fun pressBack() {
         service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
+    }
+
+    private inner class GestureCallback : AccessibilityService.GestureResultCallback() {
+        override fun onCompleted(gestureDescription: GestureDescription?) {
+            super.onCompleted(gestureDescription)
+            next()
+        }
+
+        override fun onCancelled(gestureDescription: GestureDescription?) {
+            super.onCancelled(gestureDescription)
+            next()
+        }
+
+        private fun next() {
+            lock.withLock {
+                val nextGesture = gestureQueue.pollFirst()
+                if (nextGesture == null) {
+                    hasGestureRunning = false
+                } else {
+                    if (BuildConfig.DEBUG)
+                        Log.d("DEBUG", "dispatchGesture()")
+                    service.dispatchGesture(nextGesture, GestureCallback(), null)
+                }
+            }
+        }
+    }
+
+    private fun dispatchGesture(gesture: GestureDescription) {
+        lock.withLock {
+            if (hasGestureRunning) {
+                gestureQueue.offerLast(gesture)
+            } else {
+                hasGestureRunning = true
+                if (BuildConfig.DEBUG)
+                    Log.d("DEBUG", "dispatchGesture()")
+                service.dispatchGesture(gesture, GestureCallback(), null)
+            }
+        }
     }
 
     private fun swipeUp() {
         val image = image ?: return
         val stroke = GestureDescription.StrokeDescription(Path().apply {
-            moveTo((image.width * .5).toFloat(), (image.height * .75).toFloat())
-            lineTo((image.width*.5).toFloat(), (image.height*.25).toFloat())
-        }, 0, 10)
+            moveTo(image.width * .5f, image.height * .75f)
+            lineTo(image.width * .5f, image.height * .25f)
+        }, 0, 400)
         val gesture = GestureDescription.Builder().addStroke(stroke).build() ?: return
-        service.dispatchGesture(gesture, null, null)
+        dispatchGesture(gesture)
     }
 
     private fun detect(logic: DetectionLogic, way: ClickWay = ClickWay.CLICK, yRange: Range<Double>? = null, outY: IntArray? = null): Boolean {
