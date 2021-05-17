@@ -327,7 +327,7 @@ class AowScript(private val service: MyService, private val data: PointData, pri
         val stroke = GestureDescription.StrokeDescription(Path().apply {
             moveTo(x.toFloat(), y.toFloat())
             lineTo(x.toFloat(), y.toFloat())
-       }, 0, 500)
+       }, 0, 1)
         val gesture = GestureDescription.Builder().addStroke(stroke).build()?:return
         dispatchGesture(gesture)
     }
