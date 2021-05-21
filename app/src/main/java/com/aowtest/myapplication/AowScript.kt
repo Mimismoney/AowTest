@@ -202,10 +202,14 @@ class AowScript(private val service: MyService, private val data: PointData, pri
             val outY = intArrayOf(0)
             if (now - lastTreasureTime > treasurePeriodSeconds * 1000 && detect(data.logic[0]))
                 lastTreasureTime = now
+            else if (!headHunt && now - lastTreasureTime > treasurePeriodSeconds * 1000 + 600 * 1000) {
+                lastTreasureTime += 600 * 1000
+                restart("無法領取掛機寶箱")
+            }
             else if (headHunt && detect(data.logic[1])) ;
             else if (headHunt && detect(data.logic[2])) ;
             else if (!headHunt && detect(data.logic[3])) ;
-            else if (hasCoin && detect(data.logic[5])) ;
+            else if (hasCoin && now - lastTreasureTime < treasurePeriodSeconds * 1000 + 300 * 1000 && detect(data.logic[5])) ;
             else if (detect(data.logic[6], ClickWay.NONE))
                 noAd(data.logic[6].rect)
             else if (detect(data.logic[7], ClickWay.NONE))
@@ -224,7 +228,6 @@ class AowScript(private val service: MyService, private val data: PointData, pri
             else if (detect(data.logic[15])) ;
             else if (heroDeadQuit && detect(data.logic[16], ClickWay.PRESS_BACK));
             else if (detect(data.logic[21]));
-            // else if (detect(data.logic[13], ClickWay.CLICK, Range.create(0.0, 0.8))) ;
             else if (detect(data.logic[18], ClickWay.CLICK, Range.create(0.0, 1.0)))
             else if (detect(data.logic[19], ClickWay.CLICK, Range.create(0.2, 1.0)))
             else if (detect(data.logic[4], ClickWay.PRESS_BACK, Range.create(0.2, 1.0)))
@@ -322,6 +325,9 @@ class AowScript(private val service: MyService, private val data: PointData, pri
     }
 
     private fun click(x: Int, y: Int) {
+        val image = image ?: return
+        if (x !in 0 until image.width || y !in 0 until image.height)
+            return
         if (BuildConfig.DEBUG)
             Log.d("ACTION", "Click ($x, $y)")
         val stroke = GestureDescription.StrokeDescription(Path().apply {
@@ -463,8 +469,7 @@ private enum class ClickWay {
 }
 
 private fun Image.getPixelColor(x: Int, y: Int) : Color {
-    if (!(0 until width).contains(x)) throw IllegalArgumentException("x = $x not in (0, ${width})")
-    if (!(0 until height).contains(y)) throw IllegalArgumentException("y = $y not in (0, ${height})")
+    if (x !in 0 until width || y !in 0 until height) return Color(0, 0, 0)
     val plane = planes[0] ?: throw IllegalStateException("plane = null")
     val buffer = plane.buffer ?: throw IllegalStateException("buffer = null")
     val offset = y * plane.rowStride + x * plane.pixelStride

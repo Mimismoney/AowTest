@@ -96,17 +96,14 @@ class MainActivity : Activity() {
             "RESTART" -> {
                 Looper.myLooper()?.let {
                     Handler(it).postDelayed({
-                        (getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager).killBackgroundProcesses("com.addictive.strategy.army")
-                        Handler(it).postDelayed({
-                            try {
-                                applicationContext.startActivity(Intent().apply {
-                                    component = ComponentName("com.addictive.strategy.army", "com.addictive.strategy.army.UnityPlayerActivity")
-                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                                })
-                            } catch (ex: ActivityNotFoundException) {
-                                ToastUtil.showToast(this, "無法找到遊戲檔案", Toast.LENGTH_SHORT)
-                            }
-                        }, 1000)
+                        try {
+                            applicationContext.startActivity(Intent().apply {
+                                component = ComponentName("com.addictive.strategy.army", "com.addictive.strategy.army.UnityPlayerActivity")
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION or Intent.FLAG_ACTIVITY_NO_HISTORY
+                            })
+                        } catch (ex: ActivityNotFoundException) {
+                            ToastUtil.showToast(this, "無法找到遊戲檔案", Toast.LENGTH_SHORT)
+                        }
                     }, 1000)
                 }
             }
