@@ -94,6 +94,13 @@ class MainActivity : Activity() {
     private fun onIntent(intent: Intent?) {
         when (intent?.action) {
             "RESTART" -> {
+                try {
+                    ProcessBuilder("su", "-c", "am force-stop com.addictive.strategy.army").start().waitFor()
+                } catch (ex: Exception) {
+                    if (BuildConfig.DEBUG) {
+                        ex.printStackTrace()
+                    }
+                }
                 Looper.myLooper()?.let {
                     Handler(it).postDelayed({
                         try {
