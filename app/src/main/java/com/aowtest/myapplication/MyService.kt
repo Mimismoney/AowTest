@@ -129,7 +129,12 @@ class MyService : AccessibilityService() {
                 width,
                 height
             )
-            script = AowScript(this, data, imageReader)
+            try {
+                script = AowScript(this, data, imageReader)
+            } catch (err: UnsatisfiedLinkError) {
+                ToastUtil.showToast(this, "請安裝arm64或x86-64版")
+                return
+            }
             serviceInfo?.apply {
                 this.eventTypes = AccessibilityEvent.TYPES_ALL_MASK
                 this.flags = AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS or AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS
